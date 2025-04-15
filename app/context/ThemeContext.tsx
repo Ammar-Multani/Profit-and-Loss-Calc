@@ -12,20 +12,62 @@ interface ThemeContextType {
   theme: typeof MD3LightTheme;
   colors: {
     background: string;
+    backgroundSecondary: string;
     surface: string;
     surfaceVariant: string;
+    surfaceElevated: string;
     primary: string;
+    primaryLight: string;
+    primaryDark: string;
     secondary: string;
+    secondaryLight: string;
+    accent: string;
     error: string;
     success: string;
     warning: string;
+    info: string;
     text: string;
     textSecondary: string;
+    textTertiary: string;
     border: string;
     borderLight: string;
     card: string;
+    cardElevated: string;
     icon: string;
     placeholder: string;
+    shadow: string;
+    overlay: string;
+    gradient: {
+      primary: string[];
+      success: string[];
+      error: string[];
+      warning: string[];
+      neutral: string[];
+    };
+  };
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    xxl: number;
+  };
+  roundness: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    full: number;
+  };
+  elevation: {
+    none: number;
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
   };
 }
 
@@ -36,17 +78,18 @@ const CustomLightTheme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: '#2196F3',
-    primaryContainer: '#E3F2FD',
-    secondary: '#4CAF50',
-    background: '#F5F5F5',
+    primary: '#2563EB',
+    primaryContainer: '#EFF6FF',
+    secondary: '#10B981',
+    background: '#F9FAFB',
     surface: '#FFFFFF',
-    error: '#F44336',
-    onSurface: '#212121',
-    onBackground: '#212121',
+    error: '#EF4444',
+    onSurface: '#1F2937',
+    onBackground: '#1F2937',
     onPrimary: '#FFFFFF',
-    success: '#4CAF50',
-    warning: '#FFC107',
+    success: '#10B981',
+    warning: '#F59E0B',
+    info: '#3B82F6',
   },
 };
 
@@ -55,17 +98,18 @@ const CustomDarkTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: '#90CAF9',
-    primaryContainer: '#0D47A1',
-    secondary: '#81C784',
-    background: '#121212',
-    surface: '#1E1E1E',
-    error: '#EF9A9A',
-    onSurface: '#FFFFFF',
-    onBackground: '#FFFFFF',
-    onPrimary: '#000000',
-    success: '#81C784',
-    warning: '#FFD54F',
+    primary: '#3B82F6',
+    primaryContainer: '#1E3A8A',
+    secondary: '#34D399',
+    background: '#111827',
+    surface: '#1F2937',
+    error: '#F87171',
+    onSurface: '#F9FAFB',
+    onBackground: '#F9FAFB',
+    onPrimary: '#111827',
+    success: '#34D399',
+    warning: '#FBBF24',
+    info: '#60A5FA',
   },
 };
 
@@ -106,20 +150,68 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Extended colors for easier access in components
   const colors = {
     background: theme.colors.background,
+    backgroundSecondary: isDarkMode ? '#1A202C' : '#F3F4F6',
     surface: theme.colors.surface,
-    surfaceVariant: isDarkMode ? '#2C2C2C' : '#F0F0F0',
+    surfaceVariant: isDarkMode ? '#374151' : '#F3F4F6',
+    surfaceElevated: isDarkMode ? '#2D3748' : '#FFFFFF',
     primary: theme.colors.primary,
+    primaryLight: isDarkMode ? '#60A5FA' : '#93C5FD',
+    primaryDark: isDarkMode ? '#1E40AF' : '#1D4ED8',
     secondary: theme.colors.secondary,
+    secondaryLight: isDarkMode ? '#6EE7B7' : '#A7F3D0',
+    accent: isDarkMode ? '#F472B6' : '#EC4899',
     error: theme.colors.error,
     success: theme.colors.success,
     warning: theme.colors.warning,
-    text: isDarkMode ? '#FFFFFF' : '#212121',
-    textSecondary: isDarkMode ? '#BBBBBB' : '#757575',
-    border: isDarkMode ? '#444444' : '#E0E0E0',
-    borderLight: isDarkMode ? '#333333' : '#F0F0F0',
+    info: theme.colors.info,
+    text: isDarkMode ? '#F9FAFB' : '#1F2937',
+    textSecondary: isDarkMode ? '#D1D5DB' : '#4B5563',
+    textTertiary: isDarkMode ? '#9CA3AF' : '#6B7280',
+    border: isDarkMode ? '#374151' : '#E5E7EB',
+    borderLight: isDarkMode ? '#2D3748' : '#F3F4F6',
     card: theme.colors.surface,
-    icon: isDarkMode ? '#BBBBBB' : '#757575',
-    placeholder: isDarkMode ? '#777777' : '#9E9E9E',
+    cardElevated: isDarkMode ? '#2D3748' : '#FFFFFF',
+    icon: isDarkMode ? '#D1D5DB' : '#6B7280',
+    placeholder: isDarkMode ? '#6B7280' : '#9CA3AF',
+    shadow: isDarkMode ? '#000000' : '#000000',
+    overlay: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.2)',
+    gradient: {
+      primary: isDarkMode ? ['#1E40AF', '#3B82F6'] : ['#2563EB', '#60A5FA'],
+      success: isDarkMode ? ['#065F46', '#34D399'] : ['#059669', '#10B981'],
+      error: isDarkMode ? ['#991B1B', '#F87171'] : ['#DC2626', '#EF4444'],
+      warning: isDarkMode ? ['#92400E', '#FBBF24'] : ['#D97706', '#F59E0B'],
+      neutral: isDarkMode ? ['#1F2937', '#374151'] : ['#F9FAFB', '#F3F4F6'],
+    },
+  };
+
+  // Spacing system
+  const spacing = {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+    xxl: 48,
+  };
+
+  // Border radius system
+  const roundness = {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+    full: 9999,
+  };
+
+  // Elevation system
+  const elevation = {
+    none: 0,
+    xs: 1,
+    sm: 2,
+    md: 4,
+    lg: 8,
+    xl: 16,
   };
 
   return (
@@ -130,6 +222,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setThemeMode: updateThemeMode,
         theme,
         colors,
+        spacing,
+        roundness,
+        elevation,
       }}
     >
       {children}

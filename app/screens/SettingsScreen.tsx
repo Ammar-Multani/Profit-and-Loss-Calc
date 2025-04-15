@@ -5,12 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MotiView } from 'moti';
+import { BlurView } from 'expo-blur';
 
 import { resetSettings, clearCalculationHistory, getSettings, saveSettings } from '../utils/storage';
 import { useTheme } from '../context/ThemeContext';
+import Card from '../components/Card';
+import Button from '../components/Button';
 
 export default function SettingsScreen() {
-  const { colors, themeMode, setThemeMode } = useTheme();
+  const { colors, themeMode, setThemeMode, isDarkMode, spacing, roundness } = useTheme();
   const navigation = useNavigation();
   
   const [appearanceDialogVisible, setAppearanceDialogVisible] = useState(false);
@@ -150,92 +154,176 @@ export default function SettingsScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   
-  const renderSettingItem = (icon, title, onPress, showChevron = true) => (
-    <TouchableOpacity 
-      style={[styles.settingItem, { borderBottomColor: colors.borderLight }]} 
-      onPress={onPress}
+  const renderSettingItem = (icon, title, onPress, showChevron = true, index = 0, total = 1) => (
+    <MotiView
+      from={{ opacity: 0, translateY: 10 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'timing', duration: 400, delay: 100 + (index * 50) }}
     >
-      <View style={styles.settingItemLeft}>
-        <IconButton icon={icon} size={24} iconColor={colors.icon} />
-        <Text style={[styles.settingItemText, { color: colors.text }]}>{title}</Text>
-      </View>
-      {showChevron && <IconButton icon="chevron-right" size={24} iconColor={colors.placeholder} />}
-    </TouchableOpacity>
+      <TouchableOpacity 
+        style={[
+          styles.settingItem, 
+          { 
+            borderBottomColor: colors.borderLight,
+            borderBottomWidth: index < total - 1 ? 1 : 0,
+            backgroundColor: colors.surface,
+          }
+        ]} 
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.settingItemLeft}>
+          <View style={[styles.iconContainer, { backgroundColor: colors.backgroundSecondary }]}>
+            <IconButton icon={icon} size={20} iconColor={colors.primary} />
+          </View>
+          <Text style={[styles.settingItemText, { color: colors.text }]}>{title}</Text>
+        </View>
+        {showChevron && (
+          <IconButton 
+            icon="chevron-right" 
+            size={20} 
+            iconColor={colors.textTertiary} 
+            style={styles.chevronIcon}
+          />
+        )}
+      </TouchableOpacity>
+    </MotiView>
+  );
+  
+  const renderSection = (title, items) => (
+    <View style={styles.sectionContainer}>
+      <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+        {title}
+      </Text>
+      <Card elevation="sm">
+        <View style={styles.sectionContent}>
+          {items.map((item, index) => 
+            renderSettingItem(
+              item.icon, 
+              item.title, 
+              item.onPress, 
+              item.showChevron !== false, 
+              index, 
+              items.length
+            )
+          )}
+        </View>
+      </Card>
+    </View>
   );
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { 
-        backgroundColor: colors.surface, 
-        borderBottomColor: colors.border 
-      }]}>
-        <IconButton
-          icon="close"
-          size={24}
-          iconColor={colors.icon}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>APPLICATION SETTINGS</Text>
+      <View style={[styles.header, { backgroundColor: colors.backgroundSecondary }]}>
+        <MotiView
+          from={{ opacity: 0, translateX: -10 }}
+          animate={{ opacity: 1, translateX: 0 }}
+          transition={{ type: 'timing', duration: 400 }}
+        >
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            iconColor={colors.primary}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.goBack();
+            }}
+            style={styles.backButton}
+          />
+        </MotiView>
+        
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ type: 'timing', duration: 500, delay: 100 }}
+        >
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
+        </MotiView>
+        
         <View style={{ width: 40 }} />
       </View>
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>APPEARANCE & LANGUAGE</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
-          {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
-          {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
-        </View>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+      >
+        {renderSection('APPEARANCE & LANGUAGE', [
+          { icon: 'palette', title: 'Appearance', onPress: () => setAppearanceDialogVisible(true) },
+          { icon: 'translate', title: 'Language', onPress: () => setLanguageDialogVisible(true) },
+          { icon: 'calculator', title: 'Calculator Mode', onPress: () => setCalculatorDialogVisible(true) },
+        ])}
         
-        <Text style={styles.sectionTitle}>LEGAL</Text>
-        <View style={styles.section}>
-          {renderSettingItem('file-document-outline', 'Terms of service', () => 
-            handleOpenLink('https://example.com/terms'))}
-          {renderSettingItem('alert-circle-outline', 'Disclaimer', () => 
-            handleOpenLink('https://example.com/disclaimer'))}
-        </View>
+        {renderSection('LEGAL', [
+          { icon: 'file-document-outline', title: 'Terms of Service', onPress: () => handleOpenLink('https://example.com/terms') },
+          { icon: 'alert-circle-outline', title: 'Disclaimer', onPress: () => handleOpenLink('https://example.com/disclaimer') },
+        ])}
         
-        <Text style={styles.sectionTitle}>PRIVACY</Text>
-        <View style={styles.section}>
-          {renderSettingItem('shield-account', 'Privacy policy', () => 
-            handleOpenLink('https://example.com/privacy'))}
-        </View>
+        {renderSection('PRIVACY', [
+          { icon: 'shield-account', title: 'Privacy Policy', onPress: () => handleOpenLink('https://example.com/privacy') },
+        ])}
         
-        <Text style={styles.sectionTitle}>PROFIT AND LOSS CALCULATOR</Text>
-        <View style={styles.section}>
-          {renderSettingItem('book-open-variant', 'Manual', () => 
-            handleOpenLink('https://example.com/manual'))}
-          {renderSettingItem('share-variant', 'Share this app', handleShareApp, false)}
-          {renderSettingItem('thumb-up', 'Rate us', handleRateApp, false)}
-        </View>
+        {renderSection('PROFIT AND LOSS CALCULATOR', [
+          { icon: 'book-open-variant', title: 'User Manual', onPress: () => handleOpenLink('https://example.com/manual') },
+          { icon: 'share-variant', title: 'Share this App', onPress: handleShareApp, showChevron: false },
+          { icon: 'thumb-up', title: 'Rate Us', onPress: handleRateApp, showChevron: false },
+        ])}
         
-        <Text style={styles.sectionTitle}>CUSTOMER SERVICE</Text>
-        <View style={styles.section}>
-          {renderSettingItem('help-circle-outline', 'Help & Support', () => 
-            handleOpenLink('https://example.com/support'))}
-          {renderSettingItem('bug', 'Submit a bug report', handleSubmitBugReport)}
-        </View>
+        {renderSection('CUSTOMER SERVICE', [
+          { icon: 'help-circle-outline', title: 'Help & Support', onPress: () => handleOpenLink('https://example.com/support') },
+          { icon: 'bug', title: 'Submit a Bug Report', onPress: handleSubmitBugReport },
+        ])}
         
-        <Text style={styles.sectionTitle}>FOLLOW US</Text>
-        <View style={styles.section}>
-          {renderSettingItem('home', 'Website', () => 
-            handleOpenLink('https://example.com'))}
-          {renderSettingItem('twitter', 'X', () => 
-            handleOpenLink('https://twitter.com/example'))}
-          {renderSettingItem('facebook', 'Facebook', () => 
-            handleOpenLink('https://facebook.com/example'))}
-        </View>
+        {renderSection('FOLLOW US', [
+          { icon: 'web', title: 'Website', onPress: () => handleOpenLink('https://example.com') },
+          { icon: 'twitter', title: 'X', onPress: () => handleOpenLink('https://twitter.com/example') },
+          { icon: 'facebook', title: 'Facebook', onPress: () => handleOpenLink('https://facebook.com/example') },
+        ])}
         
-        <TouchableOpacity 
-          style={styles.resetButton} 
-          onPress={handleClearHistory}
+        <MotiView
+          from={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: 500, delay: 600 }}
+          style={styles.dangerZone}
         >
-          <Text style={[styles.resetButtonText, { color: colors.error }]}>Erase all content and settings</Text>
-        </TouchableOpacity>
+          <Card elevation="sm">
+            <View style={styles.dangerZoneContent}>
+              <Text style={[styles.dangerZoneTitle, { color: colors.error }]}>
+                Danger Zone
+              </Text>
+              <Text style={[styles.dangerZoneDescription, { color: colors.textSecondary }]}>
+                These actions are irreversible. Please proceed with caution.
+              </Text>
+              <View style={styles.dangerZoneButtons}>
+                <Button
+                  title="Reset Settings"
+                  onPress={handleResetSettings}
+                  variant="outlined"
+                  color="error"
+                  style={styles.dangerButton}
+                />
+                <Button
+                  title="Erase All Content"
+                  onPress={handleClearHistory}
+                  variant="filled"
+                  color="error"
+                  style={styles.dangerButton}
+                />
+              </View>
+            </View>
+          </Card>
+        </MotiView>
         
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.placeholder }]}>Copyright 2025 Tyrcord, Inc. All rights reserved.</Text>
-          <Text style={[styles.footerText, { color: colors.placeholder }]}>Version 3.22.5 (317009)</Text>
+          <Text style={[styles.footerText, { color: colors.textTertiary }]}>
+            Copyright 2025 Tyrcord, Inc. All rights reserved.
+          </Text>
+          <Text style={[styles.footerText, { color: colors.textTertiary }]}>
+            Version 3.22.5 (317009)
+          </Text>
         </View>
       </ScrollView>
       
@@ -252,61 +340,121 @@ export default function SettingsScreen() {
                 label="Light" 
                 value="light" 
                 labelStyle={{ color: colors.text }}
+                color={colors.primary}
               />
               <RadioButton.Item 
                 label="Dark" 
                 value="dark" 
                 labelStyle={{ color: colors.text }}
+                color={colors.primary}
               />
               <RadioButton.Item 
                 label="System" 
                 value="system" 
                 labelStyle={{ color: colors.text }}
+                color={colors.primary}
               />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
-            <TouchableOpacity onPress={() => setAppearanceDialogVisible(false)}>
-              <Text style={[styles.dialogButton, { color: colors.primary }]}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={() => setAppearanceDialogVisible(false)}
+              variant="text"
+              color="primary"
+            />
           </Dialog.Actions>
         </Dialog>
       </Portal>
       
       <Portal>
-        <Dialog visible={languageDialogVisible} onDismiss={() => setLanguageDialogVisible(false)}>
-          <Dialog.Title>Language</Dialog.Title>
+        <Dialog 
+          visible={languageDialogVisible} 
+          onDismiss={() => setLanguageDialogVisible(false)}
+          style={{ backgroundColor: colors.surface }}
+        >
+          <Dialog.Title style={{ color: colors.text }}>Language</Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group onValueChange={handleLanguageChange} value={language}>
-              <RadioButton.Item label="English" value="english" />
-              <RadioButton.Item label="Spanish" value="spanish" />
-              <RadioButton.Item label="French" value="french" />
-              <RadioButton.Item label="German" value="german" />
-              <RadioButton.Item label="Chinese" value="chinese" />
+              <RadioButton.Item 
+                label="English" 
+                value="english" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
+              <RadioButton.Item 
+                label="Spanish" 
+                value="spanish" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
+              <RadioButton.Item 
+                label="French" 
+                value="french" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
+              <RadioButton.Item 
+                label="German" 
+                value="german" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
+              <RadioButton.Item 
+                label="Chinese" 
+                value="chinese" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
-            <TouchableOpacity onPress={() => setLanguageDialogVisible(false)}>
-              <Text style={styles.dialogButton}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={() => setLanguageDialogVisible(false)}
+              variant="text"
+              color="primary"
+            />
           </Dialog.Actions>
         </Dialog>
       </Portal>
       
       <Portal>
-        <Dialog visible={calculatorDialogVisible} onDismiss={() => setCalculatorDialogVisible(false)}>
-          <Dialog.Title>Calculator Mode</Dialog.Title>
+        <Dialog 
+          visible={calculatorDialogVisible} 
+          onDismiss={() => setCalculatorDialogVisible(false)}
+          style={{ backgroundColor: colors.surface }}
+        >
+          <Dialog.Title style={{ color: colors.text }}>Calculator Mode</Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group onValueChange={handleCalculatorModeChange} value={calculatorMode}>
-              <RadioButton.Item label="Standard" value="standard" />
-              <RadioButton.Item label="Advanced" value="advanced" />
-              <RadioButton.Item label="Professional" value="professional" />
+              <RadioButton.Item 
+                label="Standard" 
+                value="standard" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
+              <RadioButton.Item 
+                label="Advanced" 
+                value="advanced" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
+              <RadioButton.Item 
+                label="Professional" 
+                value="professional" 
+                labelStyle={{ color: colors.text }}
+                color={colors.primary}
+              />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
-            <TouchableOpacity onPress={() => setCalculatorDialogVisible(false)}>
-              <Text style={styles.dialogButton}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={() => setCalculatorDialogVisible(false)}
+              variant="text"
+              color="primary"
+            />
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -324,57 +472,87 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 12,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 10,
+  },
+  backButton: {
+    margin: 0,
   },
   headerTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#757575',
+    fontSize: 18,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
-  section: {
-    backgroundColor: 'white',
-    marginBottom: 16,
+  scrollViewContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  sectionContainer: {
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#757575',
-    marginTop: 16,
+    fontWeight: '600',
     marginBottom: 8,
-    marginLeft: 16,
+    marginLeft: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionContent: {
+    padding: 0,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 16,
   },
   settingItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  iconContainer: {
+    borderRadius: 8,
+    marginRight: 16,
+  },
   settingItemText: {
     fontSize: 16,
-    color: '#212121',
-    marginLeft: 8,
+    fontWeight: '500',
   },
-  resetButton: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    marginTop: 24,
+  chevronIcon: {
+    margin: 0,
+  },
+  dangerZone: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  dangerZoneContent: {
+    padding: 16,
+  },
+  dangerZoneTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  dangerZoneDescription: {
+    fontSize: 14,
     marginBottom: 16,
   },
-  resetButtonText: {
-    fontSize: 16,
-    color: '#F44336',
+  dangerZoneButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dangerButton: {
+    flex: 1,
+    marginHorizontal: 4,
   },
   footer: {
     alignItems: 'center',
@@ -382,13 +560,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#9E9E9E',
     marginTop: 4,
-  },
-  dialogButton: {
-    color: '#2196F3',
-    fontSize: 16,
-    fontWeight: '500',
-    padding: 8,
   },
 });

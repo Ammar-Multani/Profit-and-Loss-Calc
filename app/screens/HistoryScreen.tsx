@@ -9,13 +9,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { getCalculationHistory, deleteCalculation } from '../utils/storage';
 import { HistoryItem } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import Card from '../components/Card';
 
 export default function HistoryScreen() {
-  const { colors } = useTheme();
+  const { colors, isDarkMode, spacing, roundness } = useTheme();
   const navigation = useNavigation();
   
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -39,7 +42,7 @@ export default function HistoryScreen() {
         const exitPrice = item.exitPrice.toString().includes(query);
         const quantity = item.quantity.toString().includes(query);
         const date = new Date(item.timestamp).toLocaleDateString().toLowerCase().includes(query);
-        const profit = item.result.netProfitLoss.toString().includes(query);
+        const profit = item.result?.netProfitLoss?.toString().includes(query);
         
         return entryPrice || exitPrice || quantity || date || profit;
       });
@@ -87,96 +90,163 @@ export default function HistoryScreen() {
     return new Date(timestamp).toLocaleDateString();
   };
   
-  const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
-    const isProfitable = item.result.netProfitLoss > 0;
+  const renderHistoryItem = ({ item, index }: { item: HistoryItem; index: number }) => {
+    const isProfitable = item.result?.netProfitLoss > 0;
     
     return (
-      <View style={[styles.historyItem, { backgroundColor: colors.surface }]}>
-        <View style={styles.historyItemHeader}>
-          <Text style={[styles.historyItemDate, { color: colors.textSecondary }]}>
-            {formatDate(item.timestamp)}
-          </Text>
-          <IconButton
-            icon="delete-outline"
-            size={20}
-            iconColor={colors.icon}
-            onPress={() => handleDeleteItem(item.id)}
-          />
-        </View>
-        
-        <View style={styles.historyItemDetails}>
-          <View style={styles.historyItemRow}>
-            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Entry Price:</Text>
-            <Text style={[styles.historyItemValue, { color: colors.text }]}>
-              {formatCurrency(item.entryPrice)}
-            </Text>
+      <MotiView
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 500, delay: index * 100 }}
+        style={styles.historyItemContainer}
+      >
+        <Card elevation="sm">
+          <View style={styles.historyItemHeader}>
+            <View style={styles.historyItemDateContainer}>
+              <IconButton
+                icon="calendar"
+                size={16}
+                iconColor={colors.primary}
+                style={styles.calendarIcon}
+              />
+              <Text style={[styles.historyItemDate, { color: colors.textSecondary }]}>
+                {formatDate(item.timestamp)}
+              </Text>
+            </View>
+            <View style={styles.historyItemActions}>
+              <IconButton
+                icon="content-copy"
+                size={18}
+                iconColor={colors.textSecondary}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={styles.actionIcon}
+              />
+              <IconButton
+                icon="delete-outline"
+                size={18}
+                iconColor={colors.textSecondary}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  handleDeleteItem(item.id);
+                }}
+                style={styles.actionIcon}
+              />
+            </View>
           </View>
           
-          <View style={styles.historyItemRow}>
-            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Exit Price:</Text>
-            <Text style={[styles.historyItemValue, { color: colors.text }]}>
-              {formatCurrency(item.exitPrice)}
-            </Text>
+          <View style={styles.historyItemDetails}>
+            <View style={styles.historyItemRow}>
+              <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Entry Price:</Text>
+              <Text style={[styles.historyItemValue, { color: colors.text }]}>
+                {formatCurrency(item.entryPrice)}
+              </Text>
+            </View>
+            
+            <View style={styles.historyItemRow}>
+              <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Exit Price:</Text>
+              <Text style={[styles.historyItemValue, { color: colors.text }]}>
+                {formatCurrency(item.exitPrice)}
+              </Text>
+            </View>
+            
+            <View style={styles.historyItemRow}>
+              <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Quantity:</Text>
+              <Text style={[styles.historyItemValue, { color: colors.text }]}>
+                {item.quantity}
+              </Text>
+            </View>
+            
+            <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+            
+            <View style={styles.historyItemRow}>
+              <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Net Profit/Loss:</Text>
+              <Text style={[
+                styles.historyItemValue,
+                {color: isProfitable ? colors.success : colors.error}
+              ]}>
+                {formatCurrency(item.result?.netProfitLoss || 0)}
+              </Text>
+            </View>
+            
+            <View style={styles.historyItemRow}>
+              <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Return:</Text>
+              <Text style={[
+                styles.historyItemValue,
+                {color: isProfitable ? colors.success : colors.error}
+              ]}>
+                {formatPercentage(item.result?.profitLossPercentage || 0)}
+              </Text>
+            </View>
           </View>
           
-          <View style={styles.historyItemRow}>
-            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Quantity:</Text>
-            <Text style={[styles.historyItemValue, { color: colors.text }]}>
-              {item.quantity}
-            </Text>
+          <View style={styles.profitIndicatorContainer}>
+            <LinearGradient
+              colors={isProfitable ? colors.gradient.success : colors.gradient.error}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.profitIndicator,
+                { borderRadius: roundness.full }
+              ]}
+            />
           </View>
-          
-          <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-          
-          <View style={styles.historyItemRow}>
-            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Net Profit/Loss:</Text>
-            <Text style={[
-              styles.historyItemValue,
-              {color: isProfitable ? colors.success : colors.error}
-            ]}>
-              {formatCurrency(item.result.netProfitLoss)}
-            </Text>
-          </View>
-          
-          <View style={styles.historyItemRow}>
-            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Return:</Text>
-            <Text style={[
-              styles.historyItemValue,
-              {color: isProfitable ? colors.success : colors.error}
-            ]}>
-              {formatPercentage(item.result.profitLossPercentage)}
-            </Text>
-          </View>
-        </View>
-      </View>
+        </Card>
+      </MotiView>
     );
   };
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { 
-        backgroundColor: colors.surface, 
-        borderBottomColor: colors.border 
-      }]}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.icon}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Calculation History</Text>
+      <View style={[styles.header, { backgroundColor: colors.backgroundSecondary }]}>
+        <MotiView
+          from={{ opacity: 0, translateX: -10 }}
+          animate={{ opacity: 1, translateX: 0 }}
+          transition={{ type: 'timing', duration: 400 }}
+        >
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            iconColor={colors.primary}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.goBack();
+            }}
+            style={styles.backButton}
+          />
+        </MotiView>
+        
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ type: 'timing', duration: 500, delay: 100 }}
+        >
+          <Text style={[styles.headerTitle, { color: colors.text }]}>History</Text>
+        </MotiView>
+        
         <View style={{ width: 40 }} />
       </View>
       
-      <Searchbar
-        placeholder="Search history"
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-        style={[styles.searchBar, { backgroundColor: colors.surface }]}
-        iconColor={colors.icon}
-        placeholderTextColor={colors.placeholder}
-        inputStyle={{ color: colors.text }}
-      />
+      <MotiView
+        from={{ opacity: 0, translateY: -10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 500, delay: 200 }}
+        style={styles.searchBarContainer}
+      >
+        <Searchbar
+          placeholder="Search history"
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+          style={[styles.searchBar, { 
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+          }]}
+          iconColor={colors.primary}
+          placeholderTextColor={colors.placeholder}
+          inputStyle={{ color: colors.text }}
+        />
+      </MotiView>
       
       {filteredHistory.length > 0 ? (
         <FlatList
@@ -187,13 +257,28 @@ export default function HistoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       ) : (
-        <View style={styles.emptyContainer}>
+        <MotiView
+          from={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: 500, delay: 300 }}
+          style={styles.emptyContainer}
+        >
+          <IconButton
+            icon={history.length > 0 ? "magnify-close" : "history"}
+            size={48}
+            iconColor={colors.textTertiary}
+          />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             {history.length > 0 
               ? 'No results found for your search.' 
               : 'No calculation history yet.'}
           </Text>
-        </View>
+          <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
+            {history.length > 0 
+              ? 'Try a different search term.' 
+              : 'Your saved calculations will appear here.'}
+          </Text>
+        </MotiView>
       )}
     </SafeAreaView>
   );
@@ -209,33 +294,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 12,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 10,
+  },
+  backButton: {
+    margin: 0,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  searchBarContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   searchBar: {
-    margin: 16,
-    elevation: 2,
-    backgroundColor: 'white',
-    borderRadius: 8,
+    borderWidth: 1,
+    elevation: 0,
+    borderRadius: 12,
   },
   listContent: {
     padding: 16,
+    paddingTop: 8,
   },
-  historyItem: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+  historyItemContainer: {
     marginBottom: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   historyItemHeader: {
     flexDirection: 'row',
@@ -243,9 +332,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  historyItemDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calendarIcon: {
+    margin: 0,
+    marginRight: -4,
+  },
   historyItemDate: {
     fontSize: 14,
-    color: '#757575',
+  },
+  historyItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIcon: {
+    margin: 0,
   },
   historyItemDetails: {
     marginTop: 8,
@@ -254,19 +357,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   historyItemLabel: {
     fontSize: 14,
-    color: '#757575',
   },
   historyItemValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#212121',
   },
   divider: {
     marginVertical: 8,
+  },
+  profitIndicatorContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 4,
+    height: '100%',
+    overflow: 'hidden',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+  profitIndicator: {
+    width: 4,
+    height: '100%',
   },
   emptyContainer: {
     flex: 1,
@@ -275,8 +390,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#757575',
+    fontSize: 18,
+    fontWeight: '500',
     textAlign: 'center',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    maxWidth: '80%',
   },
 });
