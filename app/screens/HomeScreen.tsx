@@ -418,17 +418,215 @@ export default function HomeScreen() {
               <View style={styles.cardHeader}>
                 <Text style={[styles.cardTitle, { color: isDarkMode ? '#90CAF9' : '#2196F3' }]}>Results</Text>
                 <IconButton 
-                  icon={showChart ? "chart-bar" : "chart-donut"} 
+                  icon="chart-donut" 
                   size={20} 
-                  iconColor={isDarkMode ? '#90CAF9' : '#2196F3'} 
-                  onPress={() => {
-                    setShowChart(!showChart);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
+                  color={isDarkMode ? '#90CAF9' : '#2196F3'} 
+                  onPress={() => setShowChart(!showChart)}
                 />
               </View>
               
-              {showChart && renderResultsChart()}
+              {showChart ? (
+                renderResultsChart()
+              ) : (
+                <>
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Revenue</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.revenue)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of goods sold</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.costOfGoodsSold)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Gross profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.grossProfit)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} color="#757575" />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Gross profit margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.grossProfitMargin)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} color="#757575" />
+                    </View>
+                  </View>
+                  
+                  {showAdvanced && (
+                    <>
+                      <View style={styles.resultRow}>
+                        <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling and operating expenses</Text>
+                        <View style={styles.resultValueContainer}>
+                          <Text style={[styles.resultValue, {color: '#F44336'}]}>
+                            {formatCurrency(results.totalExpenses)}
+                          </Text>
+                          <IconButton icon="content-copy" size={16} color="#757575" />
+                        </View>
+                      </View>
+                      
+                      <View style={styles.resultRow}>
+                        <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Operating profit</Text>
+                        <View style={styles.resultValueContainer}>
+                          <Text style={[
+                            styles.resultValue, 
+                            {color: results.operatingProfit >= 0 ? '#4CAF50' : '#F44336'}
+                          ]}>
+                            {formatCurrency(results.operatingProfit)}
+                          </Text>
+                          <IconButton icon="content-copy" size={16} color="#757575" />
+                        </View>
+                      </View>
+                    </>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Net profit margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.netProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.netProfitMargin)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  {showAdvanced && parseFloat(taxRate) > 0 && (
+                    <View style={styles.resultRow}>
+                      <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Tax amount</Text>
+                      <View style={styles.resultValueContainer}>
+                        <Text style={[styles.resultValue, {color: '#F44336'}]}>
+                          {formatCurrency(results.taxAmount)}
+                        </Text>
+                        <IconButton icon="content-copy" size={16} color="#757575" />
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Net profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.netProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.netProfit)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <Divider style={[styles.divider, { backgroundColor: isDarkMode ? '#333333' : '#F0F0F0' }]} />
+                  <Text style={[styles.additionalMetricsLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>
+                    Additional metrics
+                  </Text>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of investment</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.investment)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  {results.breakEvenUnits > 0 && (
+                    <View style={styles.resultRow}>
+                      <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Break-even units</Text>
+                      <View style={styles.resultValueContainer}>
+                        <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                          {results.breakEvenUnits}
+                        </Text>
+                        <IconButton 
+                          icon="content-copy" 
+                          size={16} 
+                          iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                        />
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Return on investment</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.roi >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.roi)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                </>
+              )}
             </View>
           )}
         </ScrollView>
