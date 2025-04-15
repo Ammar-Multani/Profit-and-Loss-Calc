@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  Animated,
 } from 'react-native';
 import { 
   Text, 
@@ -48,6 +49,11 @@ export default function HomeScreen() {
   const [calculatorMode, setCalculatorMode] = useState('standard');
   const [results, setResults] = useState(null);
   const [showChart, setShowChart] = useState(false);
+  
+  const fadeAnim1 = React.useRef(new Animated.Value(0)).current;
+  const translateYAnim1 = React.useRef(new Animated.Value(20)).current;
+  const fadeAnim2 = React.useRef(new Animated.Value(0)).current;
+  const translateYAnim2 = React.useRef(new Animated.Value(20)).current;
   
   useEffect(() => {
     const loadCalculatorMode = async () => {
@@ -95,10 +101,8 @@ export default function HomeScreen() {
     const investment = costOfGoodsSold + totalExpenses;
     const roi = (netProfit / investment) * 100;
     
-    // Calculate unit contribution
     const unitContribution = sellPrice - buyPrice - buyExpenses - sellExpenses;
     
-    // Calculate break-even units
     let breakEvenUnits = 0;
     if (unitContribution > 0) {
       breakEvenUnits = Math.ceil(opExpenses / unitContribution);
@@ -238,10 +242,11 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollViewContent}
         >
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 600 }}
+          <Animated.View
+            style={{
+              opacity: fadeAnim1,
+              transform: [{ translateY: translateYAnim1 }],
+            }}
           >
             <Card elevation="md" animated>
               <View style={styles.cardHeader}>
@@ -466,14 +471,17 @@ export default function HomeScreen() {
                 </MotiView>
               )}
             </Card>
-          </MotiView>
+          </Animated.View>
           
           {results && (
-            <MotiView
-              from={{ opacity: 0, translateY: 20 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'timing', duration: 600, delay: 200 }}
-              style={styles.resultsCardContainer}
+            <Animated.View
+              style={[
+                styles.resultsCardContainer,
+                {
+                  opacity: fadeAnim2,
+                  transform: [{ translateY: translateYAnim2 }],
+                }
+              ]}
             >
               <Card elevation="md" animated>
                 <View style={styles.cardHeader}>
@@ -778,7 +786,7 @@ export default function HomeScreen() {
                   </>
                 )}
               </Card>
-            </MotiView>
+            </Animated.View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>

@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { MotiView } from 'moti';
+import { Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { getCalculationHistory, deleteCalculation } from '../utils/storage';
@@ -24,6 +24,11 @@ export default function HistoryScreen() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
+  
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const translateXAnim = React.useRef(new Animated.Value(-10)).current;
+  const searchBarFadeAnim = React.useRef(new Animated.Value(0)).current;
+  const searchBarTranslateYAnim = React.useRef(new Animated.Value(-10)).current;
   
   useFocusEffect(
     React.useCallback(() => {
@@ -93,12 +98,34 @@ export default function HistoryScreen() {
   const renderHistoryItem = ({ item, index }: { item: HistoryItem; index: number }) => {
     const isProfitable = item.result?.netProfitLoss > 0;
     
+    const itemFadeAnim = React.useRef(new Animated.Value(0)).current;
+    const itemTranslateYAnim = React.useRef(new Animated.Value(20)).current;
+    
+    React.useEffect(() => {
+      Animated.timing(itemFadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 100,
+        useNativeDriver: true,
+      }).start();
+      
+      Animated.timing(itemTranslateYAnim, {
+        toValue: 0,
+        duration: 500,
+        delay: index * 100,
+        useNativeDriver: true,
+      }).start();
+    }, [itemFadeAnim, itemTranslateYAnim]);
+    
     return (
-      <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 500, delay: index * 100 }}
-        style={styles.historyItemContainer}
+      <Animated.View
+        style={[
+          styles.historyItemContainer,
+          {
+            opacity: itemFadeAnim,
+            transform: [{ translateY: itemTranslateYAnim }],
+          }
+        ]}
       >
         <Card elevation="sm">
           <View style={styles.historyItemHeader}>
@@ -193,17 +220,18 @@ export default function HistoryScreen() {
             />
           </View>
         </Card>
-      </MotiView>
+      </Animated.View>
     );
   };
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.backgroundSecondary }]}>
-        <MotiView
-          from={{ opacity: 0, translateX: -10 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ type: 'timing', duration: 400 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateX: translateXAnim }],
+          }}
         >
           <IconButton
             icon="arrow-left"
@@ -215,24 +243,27 @@ export default function HistoryScreen() {
             }}
             style={styles.backButton}
           />
-        </MotiView>
+        </Animated.View>
         
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: 'timing', duration: 500, delay: 100 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+          }}
         >
           <Text style={[styles.headerTitle, { color: colors.text }]}>History</Text>
-        </MotiView>
+        </Animated.View>
         
         <View style={{ width: 40 }} />
       </View>
       
-      <MotiView
-        from={{ opacity: 0, translateY: -10 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 500, delay: 200 }}
-        style={styles.searchBarContainer}
+      <Animated.View
+        style={[
+          styles.searchBarContainer,
+          {
+            opacity: searchBarFadeAnim,
+            transform: [{ translateY: searchBarTranslateYAnim }],
+          }
+        ]}
       >
         <Searchbar
           placeholder="Search history"
@@ -246,7 +277,7 @@ export default function HistoryScreen() {
           placeholderTextColor={colors.placeholder}
           inputStyle={{ color: colors.text }}
         />
-      </MotiView>
+      </Animated.View>
       
       {filteredHistory.length > 0 ? (
         <FlatList
@@ -257,11 +288,14 @@ export default function HistoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       ) : (
-        <MotiView
-          from={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'timing', duration: 500, delay: 300 }}
-          style={styles.emptyContainer}
+        <Animated.View
+          style={[
+            styles.emptyContainer,
+            {
+              opacity: searchBarFadeAnim,
+              transform: [{ scale: 0.9 + (searchBarFadeAnim.__getValue() * 0.1) }],
+            }
+          ]}
         >
           <IconButton
             icon={history.length > 0 ? "magnify-close" : "history"}
@@ -278,7 +312,7 @@ export default function HistoryScreen() {
               ? 'Try a different search term.' 
               : 'Your saved calculations will appear here.'}
           </Text>
-        </MotiView>
+        </Animated.View>
       )}
     </SafeAreaView>
   );

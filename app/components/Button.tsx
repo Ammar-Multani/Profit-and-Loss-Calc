@@ -7,8 +7,8 @@ import {
   TextStyle, 
   StyleProp,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
-import { MotiView } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 
@@ -44,6 +44,27 @@ const Button: React.FC<ButtonProps> = ({
   animated = true,
 }) => {
   const { colors, roundness, spacing } = useTheme();
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    if (animated && !disabled) {
+      Animated.timing(scaleAnim, {
+        toValue: 0.97,
+        duration: 100,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  const handlePressOut = () => {
+    if (animated && !disabled) {
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
 
   // Size configurations
   const sizeStyles = {
@@ -143,6 +164,8 @@ const Button: React.FC<ButtonProps> = ({
       return (
         <TouchableOpacity
           onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
           disabled={disabled || loading}
           style={styles.gradientContainer}
           activeOpacity={0.8}
@@ -162,6 +185,8 @@ const Button: React.FC<ButtonProps> = ({
     return (
       <TouchableOpacity
         onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         disabled={disabled || loading}
         style={buttonStyles}
         activeOpacity={0.8}
@@ -173,14 +198,14 @@ const Button: React.FC<ButtonProps> = ({
 
   if (animated) {
     return (
-      <MotiView
-        from={{ scale: 1 }}
-        animate={{ scale: disabled ? 1 : 1 }}
-        transition={{ type: 'timing', duration: 100 }}
-        style={fullWidth ? styles.fullWidth : undefined}
+      <Animated.View
+        style={[
+          fullWidth ? styles.fullWidth : undefined,
+          { transform: [{ scale: scaleAnim }] }
+        ]}
       >
         {renderButton()}
-      </MotiView>
+      </Animated.View>
     );
   }
 

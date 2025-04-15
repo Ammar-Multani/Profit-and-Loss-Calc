@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import CircularProgressIndicator from 'react-native-circular-progress-indicator';
-import { MotiView } from 'moti';
 import { useTheme } from '../context/ThemeContext';
 
 interface CircularProgressDisplayProps {
@@ -16,6 +15,54 @@ interface CircularProgressDisplayProps {
 
 const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data }) => {
   const { colors, isDarkMode, spacing, roundness } = useTheme();
+  
+  // Animation values
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
+  const translateXAnim1 = React.useRef(new Animated.Value(-20)).current;
+  const translateXAnim2 = React.useRef(new Animated.Value(-20)).current;
+  const translateXAnim3 = React.useRef(new Animated.Value(-20)).current;
+  const translateXAnim4 = React.useRef(new Animated.Value(-20)).current;
+
+  useEffect(() => {
+    // Animate the chart
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animate the legend items with staggered delays
+    Animated.stagger(100, [
+      Animated.timing(translateXAnim1, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateXAnim2, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateXAnim3, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateXAnim4, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, scaleAnim, translateXAnim1, translateXAnim2, translateXAnim3, translateXAnim4]);
   
   // Calculate percentages
   const total = data.revenue;
@@ -36,11 +83,14 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
 
   return (
     <View style={styles.container}>
-      <MotiView
-        from={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', damping: 15 }}
-        style={styles.progressContainer}
+      <Animated.View
+        style={[
+          styles.progressContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          }
+        ]}
       >
         <CircularProgressIndicator
           value={netProfitPercentage > 0 ? netProfitPercentage : 0}
@@ -62,13 +112,14 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
           valueSuffix="%"
           progressValueStyle={{ fontWeight: '600', fontSize: 24 }}
         />
-      </MotiView>
+      </Animated.View>
       
       <View style={styles.legendContainer}>
-        <MotiView
-          from={{ opacity: 0, translateX: -20 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ type: 'timing', duration: 600, delay: 200 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateX: translateXAnim1 }],
+          }}
         >
           <View style={[styles.legendRow, { backgroundColor: colors.surfaceVariant, borderRadius: roundness.md }]}>
             <View style={[styles.legendColorBox, { backgroundColor: colors.success }]} />
@@ -79,12 +130,13 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
               {formatCurrency(data.netProfit)}
             </Text>
           </View>
-        </MotiView>
+        </Animated.View>
         
-        <MotiView
-          from={{ opacity: 0, translateX: -20 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ type: 'timing', duration: 600, delay: 300 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateX: translateXAnim2 }],
+          }}
         >
           <View style={[styles.legendRow, { backgroundColor: colors.surfaceVariant, borderRadius: roundness.md }]}>
             <View style={[styles.legendColorBox, { backgroundColor: colors.primary }]} />
@@ -95,12 +147,13 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
               {formatCurrency(data.costOfGoodsSold)}
             </Text>
           </View>
-        </MotiView>
+        </Animated.View>
         
-        <MotiView
-          from={{ opacity: 0, translateX: -20 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ type: 'timing', duration: 600, delay: 400 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateX: translateXAnim3 }],
+          }}
         >
           <View style={[styles.legendRow, { backgroundColor: colors.surfaceVariant, borderRadius: roundness.md }]}>
             <View style={[styles.legendColorBox, { backgroundColor: colors.warning }]} />
@@ -111,13 +164,14 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
               {formatCurrency(data.totalExpenses)}
             </Text>
           </View>
-        </MotiView>
+        </Animated.View>
         
         {data.taxAmount > 0 && (
-          <MotiView
-            from={{ opacity: 0, translateX: -20 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            transition={{ type: 'timing', duration: 600, delay: 500 }}
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateX: translateXAnim4 }],
+            }}
           >
             <View style={[styles.legendRow, { backgroundColor: colors.surfaceVariant, borderRadius: roundness.md }]}>
               <View style={[styles.legendColorBox, { backgroundColor: colors.error }]} />
@@ -128,7 +182,7 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
                 {formatCurrency(data.taxAmount)}
               </Text>
             </View>
-          </MotiView>
+          </Animated.View>
         )}
       </View>
     </View>

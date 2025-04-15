@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MotiView } from 'moti';
 import { BlurView } from 'expo-blur';
+import { Animated } from 'react-native';
 
 import { resetSettings, clearCalculationHistory, getSettings, saveSettings } from '../utils/storage';
 import { useTheme } from '../context/ThemeContext';
@@ -23,6 +24,9 @@ export default function SettingsScreen() {
   
   const [language, setLanguage] = useState('english');
   const [calculatorMode, setCalculatorMode] = useState('standard');
+  
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const translateXAnim = React.useRef(new Animated.Value(-10)).current;
   
   useEffect(() => {
     const loadSettings = async () => {
@@ -154,44 +158,66 @@ export default function SettingsScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   
-  const renderSettingItem = (icon, title, onPress, showChevron = true, index = 0, total = 1) => (
-    <MotiView
-      from={{ opacity: 0, translateY: 10 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 400, delay: 100 + (index * 50) }}
-    >
-      <TouchableOpacity 
-        style={[
-          styles.settingItem, 
-          { 
-            borderBottomColor: colors.borderLight,
-            borderBottomWidth: index < total - 1 ? 1 : 0,
-            backgroundColor: colors.surface,
-          }
-        ]} 
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onPress();
+  const renderSettingItem = (icon, title, onPress, showChevron = true, index = 0, total = 1) => {
+    const itemFadeAnim = React.useRef(new Animated.Value(0)).current;
+    const itemTranslateYAnim = React.useRef(new Animated.Value(10)).current;
+    
+    React.useEffect(() => {
+      Animated.timing(itemFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: 100 + (index * 50),
+        useNativeDriver: true,
+      }).start();
+      
+      Animated.timing(itemTranslateYAnim, {
+        toValue: 0,
+        duration: 400,
+        delay: 100 + (index * 50),
+        useNativeDriver: true,
+      }).start();
+    }, [itemFadeAnim, itemTranslateYAnim]);
+    
+    return (
+      <Animated.View
+        style={{
+          opacity: itemFadeAnim,
+          transform: [{ translateY: itemTranslateYAnim }],
         }}
-        activeOpacity={0.7}
       >
-        <View style={styles.settingItemLeft}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.backgroundSecondary }]}>
-            <IconButton icon={icon} size={20} iconColor={colors.primary} />
+        <TouchableOpacity 
+          style={[
+            styles.settingItem, 
+            { 
+              borderBottomColor: colors.borderLight,
+              borderBottomWidth: index < total - 1 ? 1 : 0,
+              backgroundColor: colors.surface,
+            }
+          ]} 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onPress();
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingItemLeft}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.backgroundSecondary }]}>
+              <IconButton icon={icon} size={20} iconColor={colors.primary} />
+            </View>
+            <Text style={[styles.settingItemText, { color: colors.text }]}>{title}</Text>
           </View>
-          <Text style={[styles.settingItemText, { color: colors.text }]}>{title}</Text>
-        </View>
-        {showChevron && (
-          <IconButton 
-            icon="chevron-right" 
-            size={20} 
-            iconColor={colors.textTertiary} 
-            style={styles.chevronIcon}
-          />
-        )}
-      </TouchableOpacity>
-    </MotiView>
-  );
+          {showChevron && (
+            <IconButton 
+              icon="chevron-right" 
+              size={20} 
+              iconColor={colors.textTertiary} 
+              style={styles.chevronIcon}
+            />
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
   
   const renderSection = (title, items) => (
     <View style={styles.sectionContainer}>
@@ -218,10 +244,11 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.backgroundSecondary }]}>
-        <MotiView
-          from={{ opacity: 0, translateX: -10 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ type: 'timing', duration: 400 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateX: translateXAnim }],
+          }}
         >
           <IconButton
             icon="arrow-left"
@@ -233,15 +260,15 @@ export default function SettingsScreen() {
             }}
             style={styles.backButton}
           />
-        </MotiView>
+        </Animated.View>
         
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: 'timing', duration: 500, delay: 100 }}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+          }}
         >
           <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
-        </MotiView>
+        </Animated.View>
         
         <View style={{ width: 40 }} />
       </View>
@@ -283,11 +310,13 @@ export default function SettingsScreen() {
           { icon: 'facebook', title: 'Facebook', onPress: () => handleOpenLink('https://facebook.com/example') },
         ])}
         
-        <MotiView
-          from={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'timing', duration: 500, delay: 600 }}
-          style={styles.dangerZone}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ scale: 0.95 + (fadeAnim.__getValue() * 0.05) }],
+            marginTop: 16,
+            marginBottom: 24,
+          }}
         >
           <Card elevation="sm">
             <View style={styles.dangerZoneContent}>
@@ -315,7 +344,7 @@ export default function SettingsScreen() {
               </View>
             </View>
           </Card>
-        </MotiView>
+        </Animated.View>
         
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textTertiary }]}>

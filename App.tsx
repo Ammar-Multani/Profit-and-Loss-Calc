@@ -8,7 +8,6 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PortalProvider } from '@gorhom/portal';
 import { LogBox } from 'react-native';
-import { MotiProvider } from 'moti';
 
 import HomeScreen from './app/screens/HomeScreen';
 import SettingsScreen from './app/screens/SettingsScreen';
@@ -65,15 +64,13 @@ function AppContent() {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <MotiProvider>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <PortalProvider>
-              <AppContent />
-            </PortalProvider>
-          </ThemeProvider>
-        </SafeAreaProvider>
-      </MotiProvider>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <PortalProvider>
+            <AppContent />
+          </PortalProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

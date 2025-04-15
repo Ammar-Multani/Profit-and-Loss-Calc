@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp, Animated } from 'react-native';
 import { Shadow } from 'react-native-shadow-2';
 import { BlurView } from 'expo-blur';
-import { MotiView } from 'moti';
 import { useTheme } from '../context/ThemeContext';
 
 interface CardProps {
@@ -11,10 +10,6 @@ interface CardProps {
   elevation?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   glassmorphism?: boolean;
   animated?: boolean;
-  fromOpacity?: number;
-  fromScale?: number;
-  delay?: number;
-  duration?: number;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -23,12 +18,27 @@ const Card: React.FC<CardProps> = ({
   elevation = 'sm',
   glassmorphism = false,
   animated = false,
-  fromOpacity = 0,
-  fromScale = 0.95,
-  delay = 0,
-  duration = 500,
 }) => {
   const { colors, isDarkMode, roundness, elevation: elevationValues } = useTheme();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0.95)).current;
+
+  React.useEffect(() => {
+    if (animated) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [animated, fadeAnim, scaleAnim]);
 
   const elevationValue = elevationValues[elevation];
   
@@ -68,23 +78,14 @@ const Card: React.FC<CardProps> = ({
         offset={[0, elevationValue]}
         style={styles.shadow}
       >
-        <MotiView
-          from={{
-            opacity: fromOpacity,
-            scale: fromScale,
-          }}
-          animate={{
-            opacity: 1,
-            scale: 1,
-          }}
-          transition={{
-            type: 'timing',
-            duration: duration,
-            delay: delay,
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
           }}
         >
           {cardContent}
-        </MotiView>
+        </Animated.View>
       </Shadow>
     );
   }
