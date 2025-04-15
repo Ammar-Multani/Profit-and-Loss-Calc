@@ -34,3 +34,14 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# eas
+.eas/
+
+# android
+android/
+
+# ios
+ios/
+
+

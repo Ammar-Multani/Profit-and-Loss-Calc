@@ -1,11 +1,21 @@
 {
-    "build": {
-        "production": {
-            "distribution": "internal",
-            "android": {
-                "buildType": "apk"
-            }
-        }
-    }
+  "cli": {
+    "version": ">= 5.9.1"
+  },
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview2": {
+      "android": {
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "preview3": {
+      "developmentClient": true
+    },
+    "production": {}
+  }
 }
-  
