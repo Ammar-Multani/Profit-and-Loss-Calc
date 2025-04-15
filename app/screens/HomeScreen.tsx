@@ -34,8 +34,7 @@ import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const theme = useTheme();
-  const { isDarkMode, themeMode, setThemeMode } = useAppTheme();
+  const { theme, isDarkMode } = useTheme();
   
   // Input refs for keyboard navigation
   const exitPriceRef = useRef<RNTextInput>(null);
@@ -247,18 +246,18 @@ Calculated with Profit & Loss Calculator
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <Appbar.Header>
+        <Appbar.Header style={{ backgroundColor: theme.colors.surface }}>
           <Appbar.Content title="Profit & Loss Calculator" />
           <Appbar.Action icon="history" onPress={() => navigation.navigate('History' as never)} />
           <Appbar.Action icon="cog" onPress={() => navigation.navigate('Settings' as never)} />
         </Appbar.Header>
         
         <ScrollView 
-          style={styles.scrollView}
+          style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
           contentContainerStyle={styles.scrollViewContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card}>
+          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             <Card.Title title="Trade Details" titleStyle={styles.cardTitle} />
             <Card.Content>
               <CalculatorInput
@@ -378,7 +377,10 @@ Calculated with Profit & Loss Calculator
           icon="refresh"
           style={[
             styles.fab,
-            { backgroundColor: theme.colors.primaryContainer }
+            { 
+              backgroundColor: theme.colors.primaryContainer,
+              color: theme.colors.onPrimaryContainer
+            }
           ]}
           onPress={resetForm}
           visible={!!calculationResult}

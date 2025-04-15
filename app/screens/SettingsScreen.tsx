@@ -20,13 +20,11 @@ import { CalculatorSettings } from '../utils/storage';
 import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
-  const theme = useTheme();
-  const { themeMode, setThemeMode } = useAppTheme();
+  const { theme, themeMode, setThemeMode } = useTheme();
   
   const [settings, setSettings] = useState<CalculatorSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   
-  // Load settings
   useEffect(() => {
     const loadSettings = async () => {
       const savedSettings = await getSettings();
@@ -37,7 +35,6 @@ export default function SettingsScreen() {
     loadSettings();
   }, []);
   
-  // Save settings
   const handleSaveSettings = async () => {
     try {
       await saveSettings(settings);
@@ -53,7 +50,6 @@ export default function SettingsScreen() {
     }
   };
   
-  // Reset settings
   const handleResetSettings = () => {
     Alert.alert(
       'Reset Settings',
@@ -86,7 +82,6 @@ export default function SettingsScreen() {
     );
   };
   
-  // Export history
   const handleExportHistory = async () => {
     try {
       const history = await getCalculationHistory();
@@ -99,11 +94,9 @@ export default function SettingsScreen() {
       const historyJson = JSON.stringify(history, null, 2);
       const fileName = `trade_calculator_history_${new Date().toISOString().split('T')[0]}.json`;
       
-      // Check if sharing is available
       const isSharingAvailable = await Sharing.isAvailableAsync();
       
       if (isSharingAvailable) {
-        // Create a temporary file and share it
         const fileUri = `${FileSystem.documentDirectory}${fileName}`;
         await FileSystem.writeAsStringAsync(fileUri, historyJson);
         await Sharing.shareAsync(fileUri);
@@ -241,18 +234,33 @@ export default function SettingsScreen() {
           </Card.Content>
         </Card>
         
-        <Card style={styles.card}>
-          <Card.Title title="Appearance" titleStyle={styles.cardTitle} />
+        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Card.Title 
+            title="Appearance" 
+            titleStyle={[styles.cardTitle, { color: theme.colors.onSurface }]} 
+          />
           <Card.Content>
             <List.Section>
-              <List.Subheader>Theme</List.Subheader>
+              <List.Subheader style={{ color: theme.colors.onSurface }}>Theme</List.Subheader>
               <RadioButton.Group
                 onValueChange={(value) => setThemeMode(value as 'light' | 'dark' | 'system')}
                 value={themeMode}
               >
-                <RadioButton.Item label="Light" value="light" />
-                <RadioButton.Item label="Dark" value="dark" />
-                <RadioButton.Item label="System Default" value="system" />
+                <RadioButton.Item 
+                  label="Light" 
+                  value="light"
+                  labelStyle={{ color: theme.colors.onSurface }}
+                />
+                <RadioButton.Item 
+                  label="Dark" 
+                  value="dark"
+                  labelStyle={{ color: theme.colors.onSurface }}
+                />
+                <RadioButton.Item 
+                  label="System Default" 
+                  value="system"
+                  labelStyle={{ color: theme.colors.onSurface }}
+                />
               </RadioButton.Group>
             </List.Section>
             

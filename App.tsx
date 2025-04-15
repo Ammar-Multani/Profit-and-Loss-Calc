@@ -1,81 +1,67 @@
 import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PaperProvider, MD3LightTheme, MD3DarkTheme, adaptNavigationTheme } from 'react-native-paper';
+import { PaperProvider } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
-import { useMemo } from 'react';
 
 import HomeScreen from './app/screens/HomeScreen';
 import SettingsScreen from './app/screens/SettingsScreen';
 import HistoryScreen from './app/screens/HistoryScreen';
-import { ThemeProvider } from './app/context/ThemeContext';
+import { ThemeProvider, useTheme } from './app/context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
-export default function App() {
-  const colorScheme = useColorScheme();
-  
-  const theme = useMemo(() => {
-    return colorScheme === 'dark' ? {
-      ...MD3DarkTheme,
-      colors: {
-        ...MD3DarkTheme.colors,
-        primary: '#4CAF50',
-        primaryContainer: '#1B5E20',
-        secondary: '#81C784',
-      }
-    } : {
-      ...MD3LightTheme,
-      colors: {
-        ...MD3LightTheme.colors,
-        primary: '#2E7D32',
-        primaryContainer: '#C8E6C9',
-        secondary: '#388E3C',
-      }
-    };
-  }, [colorScheme]);
-  
-  const { LightTheme, DarkTheme } = adaptNavigationTheme({
-    reactNavigationLight: theme,
-    reactNavigationDark: theme,
-  });
-  
-  const navigationTheme = colorScheme === 'dark' ? DarkTheme : LightTheme;
+function AppContent() {
+  const { theme, isDarkMode } = useTheme();
 
+  return (
+    <PaperProvider theme={theme}>
+      <NavigationContainer theme={theme}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+        <Stack.Navigator 
+          initialRouteName="Home"
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: theme.colors.surface,
+            },
+            headerTintColor: theme.colors.onSurface,
+            headerShadowVisible: false,
+          }}
+        >
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen} 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Settings" 
+            component={SettingsScreen}
+            options={{ 
+              title: 'Settings',
+              headerBackTitle: 'Back'
+            }}
+          />
+          <Stack.Screen 
+            name="History" 
+            component={HistoryScreen}
+            options={{ 
+              title: 'Calculation History',
+              headerBackTitle: 'Back'
+            }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
+  );
+}
+
+export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <PaperProvider theme={theme}>
-          <NavigationContainer theme={navigationTheme}>
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <Stack.Navigator initialRouteName="Home">
-              <Stack.Screen 
-                name="Home" 
-                component={HomeScreen} 
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen 
-                name="Settings" 
-                component={SettingsScreen}
-                options={{ 
-                  title: 'Settings',
-                  headerBackTitle: 'Back'
-                }}
-              />
-              <Stack.Screen 
-                name="History" 
-                component={HistoryScreen}
-                options={{ 
-                  title: 'Calculation History',
-                  headerBackTitle: 'Back'
-                }}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </PaperProvider>
+        <AppContent />
       </ThemeProvider>
     </SafeAreaProvider>
   );

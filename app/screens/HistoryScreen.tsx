@@ -21,7 +21,7 @@ import { formatCurrency, formatPercentage } from '../utils/calculations';
 import { HistoryItem } from '../types';
 
 export default function HistoryScreen() {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,7 +29,6 @@ export default function HistoryScreen() {
   const [enableHaptics, setEnableHaptics] = useState(true);
   const [clearDialogVisible, setClearDialogVisible] = useState(false);
   
-  // Load history when screen is focused
   useFocusEffect(
     useCallback(() => {
       const loadHistory = async () => {
@@ -47,7 +46,6 @@ export default function HistoryScreen() {
     }, [])
   );
   
-  // Filter history based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredHistory(history);
@@ -76,7 +74,6 @@ export default function HistoryScreen() {
     setFilteredHistory(filtered);
   }, [searchQuery, history]);
   
-  // Handle delete calculation
   const handleDelete = (id: string) => {
     Alert.alert(
       'Delete Calculation',
@@ -97,7 +94,6 @@ export default function HistoryScreen() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               }
               
-              // Update history
               const updatedHistory = history.filter(item => item.id !== id);
               setHistory(updatedHistory);
               setFilteredHistory(
@@ -117,7 +113,6 @@ export default function HistoryScreen() {
     );
   };
   
-  // Handle clear all history
   const handleClearAll = async () => {
     setClearDialogVisible(false);
     
@@ -136,7 +131,6 @@ export default function HistoryScreen() {
     }
   };
   
-  // Render history item
   const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
     const isProfitable = item.result.netProfitLoss > 0;
     const profitLossColor = isProfitable ? theme.colors.primary : theme.colors.error;
@@ -208,12 +202,15 @@ export default function HistoryScreen() {
         placeholder="Search history..."
         onChangeText={setSearchQuery}
         value={searchQuery}
-        style={styles.searchBar}
+        style={[styles.searchBar, { backgroundColor: theme.colors.surface }]}
+        iconColor={theme.colors.onSurface}
+        inputStyle={{ color: theme.colors.onSurface }}
+        placeholderTextColor={theme.colors.onSurfaceVariant}
       />
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : filteredHistory.length > 0 ? (
         <FlatList
@@ -221,19 +218,19 @@ export default function HistoryScreen() {
           renderItem={renderHistoryItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
+          style={{ backgroundColor: theme.colors.background }}
         />
       ) : (
-        <View style={styles.emptyContainer}>
-          <Text variant="bodyLarge">No calculations found</Text>
-          {searchQuery ? (
-            <Text variant="bodyMedium" style={styles.emptySubtext}>
-              Try a different search term
-            </Text>
-          ) : (
-            <Text variant="bodyMedium" style={styles.emptySubtext}>
-              Your calculation history will appear here
-            </Text>
-          )}
+        <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
+          <Text style={{ color: theme.colors.onBackground }} variant="bodyLarge">
+            No calculations found
+          </Text>
+          <Text 
+            style={[styles.emptySubtext, { color: theme.colors.onBackgroundVariant }]} 
+            variant="bodyMedium"
+          >
+            {searchQuery ? 'Try a different search term' : 'Your calculation history will appear here'}
+          </Text>
         </View>
       )}
       

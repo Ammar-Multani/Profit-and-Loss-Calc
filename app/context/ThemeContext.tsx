@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -8,6 +9,7 @@ interface ThemeContextType {
   themeMode: ThemeMode;
   isDarkMode: boolean;
   setThemeMode: (mode: ThemeMode) => void;
+  theme: typeof MD3LightTheme;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -44,12 +46,37 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isDarkMode = 
     themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark');
 
+  const theme = isDarkMode ? {
+    ...MD3DarkTheme,
+    colors: {
+      ...MD3DarkTheme.colors,
+      primary: '#4CAF50',
+      primaryContainer: '#1B5E20',
+      secondary: '#81C784',
+      background: '#121212',
+      surface: '#1E1E1E',
+      error: '#CF6679',
+    }
+  } : {
+    ...MD3LightTheme,
+    colors: {
+      ...MD3LightTheme.colors,
+      primary: '#2E7D32',
+      primaryContainer: '#C8E6C9',
+      secondary: '#388E3C',
+      background: '#F5F5F5',
+      surface: '#FFFFFF',
+      error: '#B00020',
+    }
+  };
+
   return (
     <ThemeContext.Provider
       value={{
         themeMode,
         isDarkMode,
         setThemeMode: updateThemeMode,
+        theme,
       }}
     >
       {children}
