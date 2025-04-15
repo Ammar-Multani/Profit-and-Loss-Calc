@@ -95,8 +95,9 @@ export default function HistoryScreen() {
         <View style={styles.historyItemHeader}>
           <Text style={styles.historyItemDate}>{formatDate(item.timestamp)}</Text>
           <IconButton
-            icon="delete"
+            icon="delete-outline"
             size={20}
+            color="#757575"
             onPress={() => handleDeleteItem(item.id)}
           />
         </View>
@@ -160,6 +161,7 @@ export default function HistoryScreen() {
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchBar}
+        iconColor="#757575"
       />
       
       {filteredHistory.length > 0 ? (
@@ -168,6 +170,7 @@ export default function HistoryScreen() {
           renderItem={renderHistoryItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -192,9 +195,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
+    paddingVertical: 12,
+    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    backgroundColor: 'white',
   },
   headerTitle: {
     fontSize: 18,
@@ -203,6 +207,8 @@ const styles = StyleSheet.create({
   searchBar: {
     margin: 16,
     elevation: 2,
+    backgroundColor: 'white',
+    borderRadius: 8,
   },
   listContent: {
     padding: 16,
@@ -213,9 +219,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 2,
   },
   historyItemHeader: {

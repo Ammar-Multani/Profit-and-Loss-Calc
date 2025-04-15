@@ -100,19 +100,23 @@ export default function SettingsScreen() {
   
   const handleClearHistory = async () => {
     Alert.alert(
-      'Clear History',
-      'Are you sure you want to clear all calculation history? This action cannot be undone.',
+      'Erase All Content',
+      'Are you sure you want to erase all content and settings? This action cannot be undone.',
       [
         {
           text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Clear',
+          text: 'Erase',
           onPress: async () => {
             await clearCalculationHistory();
+            await resetSettings();
+            setThemeMode('system');
+            saveLanguage('english');
+            saveCalculatorMode('standard');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('History Cleared', 'All calculation history has been cleared.');
+            Alert.alert('Content Erased', 'All content and settings have been erased.');
           },
           style: 'destructive',
         },
@@ -150,10 +154,10 @@ export default function SettingsScreen() {
   const renderSettingItem = (icon, title, onPress, showChevron = true) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingItemLeft}>
-        <IconButton icon={icon} size={24} />
+        <IconButton icon={icon} size={24} color="#757575" />
         <Text style={styles.settingItemText}>{title}</Text>
       </View>
-      {showChevron && <IconButton icon="chevron-right" size={24} />}
+      {showChevron && <IconButton icon="chevron-right" size={24} color="#BDBDBD" />}
     </TouchableOpacity>
   );
   
@@ -165,48 +169,55 @@ export default function SettingsScreen() {
           size={24}
           onPress={() => navigation.goBack()}
         />
+        <Text style={styles.headerTitle}>APPLICATION SETTINGS</Text>
+        <View style={{ width: 40 }} />
       </View>
       
-      <Text style={styles.sectionTitle}>APPLICATION SETTINGS</Text>
-      
-      <ScrollView style={styles.scrollView}>
-        {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
-        {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
-        {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
+          {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
+          {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
+        </View>
         
         <Text style={styles.sectionTitle}>LEGAL</Text>
-        
-        {renderSettingItem('file-document-outline', 'Terms of service', () => 
-          handleOpenLink('https://example.com/terms'))}
-        {renderSettingItem('alert-circle-outline', 'Disclaimer', () => 
-          handleOpenLink('https://example.com/disclaimer'))}
+        <View style={styles.section}>
+          {renderSettingItem('file-document-outline', 'Terms of service', () => 
+            handleOpenLink('https://example.com/terms'))}
+          {renderSettingItem('alert-circle-outline', 'Disclaimer', () => 
+            handleOpenLink('https://example.com/disclaimer'))}
+        </View>
         
         <Text style={styles.sectionTitle}>PRIVACY</Text>
-        
-        {renderSettingItem('shield-account', 'Privacy policy', () => 
-          handleOpenLink('https://example.com/privacy'))}
+        <View style={styles.section}>
+          {renderSettingItem('shield-account', 'Privacy policy', () => 
+            handleOpenLink('https://example.com/privacy'))}
+        </View>
         
         <Text style={styles.sectionTitle}>PROFIT AND LOSS CALCULATOR</Text>
-        
-        {renderSettingItem('book-open-variant', 'Manual', () => 
-          handleOpenLink('https://example.com/manual'))}
-        {renderSettingItem('share-variant', 'Share this app', handleShareApp, false)}
-        {renderSettingItem('thumb-up', 'Rate us', handleRateApp, false)}
+        <View style={styles.section}>
+          {renderSettingItem('book-open-variant', 'Manual', () => 
+            handleOpenLink('https://example.com/manual'))}
+          {renderSettingItem('share-variant', 'Share this app', handleShareApp, false)}
+          {renderSettingItem('thumb-up', 'Rate us', handleRateApp, false)}
+        </View>
         
         <Text style={styles.sectionTitle}>CUSTOMER SERVICE</Text>
-        
-        {renderSettingItem('help-circle-outline', 'Help & Support', () => 
-          handleOpenLink('https://example.com/support'))}
-        {renderSettingItem('bug', 'Submit a bug report', handleSubmitBugReport)}
+        <View style={styles.section}>
+          {renderSettingItem('help-circle-outline', 'Help & Support', () => 
+            handleOpenLink('https://example.com/support'))}
+          {renderSettingItem('bug', 'Submit a bug report', handleSubmitBugReport)}
+        </View>
         
         <Text style={styles.sectionTitle}>FOLLOW US</Text>
-        
-        {renderSettingItem('home', 'Website', () => 
-          handleOpenLink('https://example.com'))}
-        {renderSettingItem('twitter', 'X', () => 
-          handleOpenLink('https://twitter.com/example'))}
-        {renderSettingItem('facebook', 'Facebook', () => 
-          handleOpenLink('https://facebook.com/example'))}
+        <View style={styles.section}>
+          {renderSettingItem('home', 'Website', () => 
+            handleOpenLink('https://example.com'))}
+          {renderSettingItem('twitter', 'X', () => 
+            handleOpenLink('https://twitter.com/example'))}
+          {renderSettingItem('facebook', 'Facebook', () => 
+            handleOpenLink('https://facebook.com/example'))}
+        </View>
         
         <TouchableOpacity 
           style={styles.resetButton} 
@@ -288,19 +299,30 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
+    paddingVertical: 12,
+    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    backgroundColor: 'white',
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#757575',
   },
   scrollView: {
     flex: 1,
+  },
+  section: {
+    backgroundColor: 'white',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '500',
     color: '#757575',
-    marginTop: 24,
+    marginTop: 16,
     marginBottom: 8,
     marginLeft: 16,
   },
@@ -310,7 +332,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },

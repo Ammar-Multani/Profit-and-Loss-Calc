@@ -190,31 +190,24 @@ export default function HomeScreen() {
       >
         <View style={styles.header}>
           <IconButton
-            icon="account-cog"
+            icon="account-outline"
             size={24}
             onPress={() => navigation.navigate('Settings' as never)}
           />
-          <View style={styles.headerActions}>
-            <IconButton
-              icon="refresh"
-              size={24}
-              onPress={resetCalculator}
-            />
-            <IconButton
-              icon="content-save"
-              size={24}
-              onPress={saveToHistory}
-            />
-          </View>
+          <IconButton
+            icon="file-pdf-box"
+            size={24}
+            onPress={saveToHistory}
+          />
         </View>
         
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.card}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.mainCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Calculator</Text>
               <View style={styles.cardActions}>
-                <IconButton icon="information" size={20} />
-                <IconButton icon="calculator-variant" size={20} />
+                <IconButton icon="information-outline" size={20} color="#2196F3" />
+                <IconButton icon="calculator-variant" size={20} color="#2196F3" />
               </View>
             </View>
             
@@ -287,6 +280,7 @@ export default function HomeScreen() {
               <IconButton 
                 icon={showAdvanced ? "chevron-up" : "chevron-down"} 
                 size={20} 
+                color="#757575"
               />
             </TouchableOpacity>
             
@@ -337,7 +331,7 @@ export default function HomeScreen() {
                       keyboardType="decimal-pad"
                       placeholder="0"
                     />
-                    <IconButton icon="dots-vertical" size={20} />
+                    <IconButton icon="dots-vertical" size={20} color="#757575" />
                   </View>
                 </View>
                 
@@ -352,7 +346,7 @@ export default function HomeScreen() {
                       keyboardType="decimal-pad"
                       placeholder="0"
                     />
-                    <IconButton icon="dots-vertical" size={20} />
+                    <IconButton icon="dots-vertical" size={20} color="#757575" />
                   </View>
                 </View>
                 
@@ -374,10 +368,10 @@ export default function HomeScreen() {
           </View>
           
           {results && (
-            <View style={styles.card}>
+            <View style={styles.mainCard}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Results</Text>
-                <IconButton icon="chart-line" size={20} />
+                <IconButton icon="chart-line" size={20} color="#2196F3" />
               </View>
               
               <View style={styles.resultRow}>
@@ -387,6 +381,7 @@ export default function HomeScreen() {
                   <IconButton 
                     icon="content-copy" 
                     size={16} 
+                    color="#757575"
                     onPress={() => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
@@ -401,6 +396,7 @@ export default function HomeScreen() {
                   <IconButton 
                     icon="content-copy" 
                     size={16} 
+                    color="#757575"
                     onPress={() => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
@@ -419,7 +415,7 @@ export default function HomeScreen() {
                       ]}>
                         {formatCurrency(results.grossProfit)}
                       </Text>
-                      <IconButton icon="content-copy" size={16} />
+                      <IconButton icon="content-copy" size={16} color="#757575" />
                     </View>
                   </View>
                   
@@ -432,7 +428,7 @@ export default function HomeScreen() {
                       ]}>
                         {formatPercentage(results.grossMargin)}
                       </Text>
-                      <IconButton icon="content-copy" size={16} />
+                      <IconButton icon="content-copy" size={16} color="#757575" />
                     </View>
                   </View>
                 </>
@@ -450,6 +446,7 @@ export default function HomeScreen() {
                   <IconButton 
                     icon="content-copy" 
                     size={16} 
+                    color="#757575"
                     onPress={() => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
@@ -469,6 +466,7 @@ export default function HomeScreen() {
                   <IconButton 
                     icon="content-copy" 
                     size={16} 
+                    color="#757575"
                     onPress={() => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
@@ -486,6 +484,7 @@ export default function HomeScreen() {
                   <IconButton 
                     icon="content-copy" 
                     size={16} 
+                    color="#757575"
                     onPress={() => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
@@ -505,6 +504,7 @@ export default function HomeScreen() {
                   <IconButton 
                     icon="content-copy" 
                     size={16} 
+                    color="#757575"
                     onPress={() => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }}
@@ -517,7 +517,7 @@ export default function HomeScreen() {
                   <Text style={styles.resultLabel}>Break-even units</Text>
                   <View style={styles.resultValueContainer}>
                     <Text style={styles.resultValue}>{Math.ceil(results.breakEvenUnits)}</Text>
-                    <IconButton icon="content-copy" size={16} />
+                    <IconButton icon="content-copy" size={16} color="#757575" />
                   </View>
                 </View>
               )}
@@ -543,21 +543,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  headerActions: {
-    flexDirection: 'row',
-  },
   scrollView: {
     flex: 1,
+    paddingHorizontal: 16,
   },
-  card: {
+  mainCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    margin: 16,
+    borderRadius: 16,
+    marginBottom: 16,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 2,
   },
   cardHeader: {
@@ -567,7 +565,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '500',
     color: '#2196F3',
   },
@@ -575,7 +573,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
@@ -612,6 +610,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 8,
+    marginTop: 8,
   },
   advancedToggleText: {
     fontSize: 14,
