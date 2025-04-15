@@ -26,6 +26,7 @@ import { saveCalculation, getSettings } from '../utils/storage';
 import { TradeCalculation } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import ResultsChart from '../components/ResultsChart';
+import CircularProgressDisplay from '../components/CircularProgressDisplay';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -201,10 +202,11 @@ export default function HomeScreen() {
       revenue: results.revenue,
       costOfGoodsSold: results.costOfGoodsSold,
       totalExpenses: results.totalExpenses,
+      taxAmount: results.taxAmount,
       netProfit: results.netProfit
     };
     
-    return <ResultsChart data={chartData} />;
+    return <CircularProgressDisplay data={chartData} />;
   };
   
   return (
@@ -426,7 +428,9 @@ export default function HomeScreen() {
               </View>
               
               {showChart ? (
-                renderResultsChart()
+                <View style={styles.chartContainer}>
+                  {renderResultsChart()}
+                </View>
               ) : (
                 <>
                   <View style={styles.resultRow}>
@@ -438,7 +442,7 @@ export default function HomeScreen() {
                       <IconButton 
                         icon="content-copy" 
                         size={16} 
-                        color="#757575"
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                         onPress={() => {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         }}
@@ -455,7 +459,7 @@ export default function HomeScreen() {
                       <IconButton 
                         icon="content-copy" 
                         size={16} 
-                        color="#757575"
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                         onPress={() => {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         }}
@@ -755,8 +759,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chartContainer: {
-    alignItems: 'center',
+    width: '100%',
     paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chartTitle: {
     fontSize: 18,
