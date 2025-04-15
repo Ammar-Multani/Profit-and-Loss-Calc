@@ -39,7 +39,7 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
       <MotiView
         from={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+        transition={{ type: 'spring', damping: 15 }}
         style={styles.progressContainer}
       >
         <CircularProgressIndicator
