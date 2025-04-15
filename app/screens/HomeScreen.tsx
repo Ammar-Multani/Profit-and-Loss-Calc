@@ -12,10 +12,10 @@ import {
   Appbar, 
   Card, 
   Button, 
-  useTheme, 
   IconButton,
   FAB,
-  Snackbar
+  Snackbar,
+  useTheme as usePaperTheme
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -34,7 +34,8 @@ import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { theme, isDarkMode } = useTheme();
+  const paperTheme = usePaperTheme();
+  const { isDarkMode } = useAppTheme();
   
   // Input refs for keyboard navigation
   const exitPriceRef = useRef<RNTextInput>(null);
@@ -241,23 +242,23 @@ Calculated with Profit & Loss Calculator
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <Appbar.Header style={{ backgroundColor: theme.colors.surface }}>
+        <Appbar.Header>
           <Appbar.Content title="Profit & Loss Calculator" />
           <Appbar.Action icon="history" onPress={() => navigation.navigate('History' as never)} />
           <Appbar.Action icon="cog" onPress={() => navigation.navigate('Settings' as never)} />
         </Appbar.Header>
         
         <ScrollView 
-          style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
             <Card.Title title="Trade Details" titleStyle={styles.cardTitle} />
             <Card.Content>
               <CalculatorInput
@@ -377,10 +378,7 @@ Calculated with Profit & Loss Calculator
           icon="refresh"
           style={[
             styles.fab,
-            { 
-              backgroundColor: theme.colors.primaryContainer,
-              color: theme.colors.onPrimaryContainer
-            }
+            { backgroundColor: paperTheme.colors.primaryContainer }
           ]}
           onPress={resetForm}
           visible={!!calculationResult}

@@ -6,13 +6,14 @@ import {
   Switch, 
   Divider, 
   Button, 
-  useTheme,
+  useTheme as usePaperTheme,
   RadioButton,
   List
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 
 import CalculatorInput from '../components/CalculatorInput';
 import { getSettings, saveSettings, resetSettings, getCalculationHistory, DEFAULT_SETTINGS } from '../utils/storage';
@@ -20,7 +21,8 @@ import { CalculatorSettings } from '../utils/storage';
 import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
-  const { theme, themeMode, setThemeMode } = useTheme();
+  const paperTheme = usePaperTheme();
+  const { themeMode, setThemeMode } = useAppTheme();
   
   const [settings, setSettings] = useState<CalculatorSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -111,14 +113,14 @@ export default function SettingsScreen() {
   
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: paperTheme.colors.background }]}>
         <Text>Loading settings...</Text>
       </View>
     );
   }
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: paperTheme.colors.background }]} edges={['bottom']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <Card style={styles.card}>
           <Card.Title title="Default Values" titleStyle={styles.cardTitle} />
@@ -234,14 +236,14 @@ export default function SettingsScreen() {
           </Card.Content>
         </Card>
         
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
           <Card.Title 
             title="Appearance" 
-            titleStyle={[styles.cardTitle, { color: theme.colors.onSurface }]} 
+            titleStyle={[styles.cardTitle, { color: paperTheme.colors.onSurface }]} 
           />
           <Card.Content>
             <List.Section>
-              <List.Subheader style={{ color: theme.colors.onSurface }}>Theme</List.Subheader>
+              <List.Subheader style={{ color: paperTheme.colors.onSurface }}>Theme</List.Subheader>
               <RadioButton.Group
                 onValueChange={(value) => setThemeMode(value as 'light' | 'dark' | 'system')}
                 value={themeMode}
@@ -249,17 +251,17 @@ export default function SettingsScreen() {
                 <RadioButton.Item 
                   label="Light" 
                   value="light"
-                  labelStyle={{ color: theme.colors.onSurface }}
+                  labelStyle={{ color: paperTheme.colors.onSurface }}
                 />
                 <RadioButton.Item 
                   label="Dark" 
                   value="dark"
-                  labelStyle={{ color: theme.colors.onSurface }}
+                  labelStyle={{ color: paperTheme.colors.onSurface }}
                 />
                 <RadioButton.Item 
                   label="System Default" 
                   value="system"
-                  labelStyle={{ color: theme.colors.onSurface }}
+                  labelStyle={{ color: paperTheme.colors.onSurface }}
                 />
               </RadioButton.Group>
             </List.Section>

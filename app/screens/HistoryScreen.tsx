@@ -5,7 +5,7 @@ import {
   Text, 
   Divider, 
   IconButton, 
-  useTheme,
+  useTheme as usePaperTheme,
   Searchbar,
   Button,
   ActivityIndicator,
@@ -19,9 +19,11 @@ import * as Haptics from 'expo-haptics';
 import { getCalculationHistory, deleteCalculation, clearCalculationHistory, getSettings } from '../utils/storage';
 import { formatCurrency, formatPercentage } from '../utils/calculations';
 import { HistoryItem } from '../types';
+import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function HistoryScreen() {
-  const { theme } = useTheme();
+  const paperTheme = usePaperTheme();
+  const { isDarkMode } = useAppTheme();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,7 +135,7 @@ export default function HistoryScreen() {
   
   const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
     const isProfitable = item.result.netProfitLoss > 0;
-    const profitLossColor = isProfitable ? theme.colors.primary : theme.colors.error;
+    const profitLossColor = isProfitable ? paperTheme.colors.primary : paperTheme.colors.error;
     const date = new Date(item.timestamp).toLocaleDateString();
     const time = new Date(item.timestamp).toLocaleTimeString();
     
@@ -197,20 +199,20 @@ export default function HistoryScreen() {
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: paperTheme.colors.background }]} edges={['bottom']}>
       <Searchbar
         placeholder="Search history..."
         onChangeText={setSearchQuery}
         value={searchQuery}
-        style={[styles.searchBar, { backgroundColor: theme.colors.surface }]}
-        iconColor={theme.colors.onSurface}
-        inputStyle={{ color: theme.colors.onSurface }}
-        placeholderTextColor={theme.colors.onSurfaceVariant}
+        style={[styles.searchBar, { backgroundColor: paperTheme.colors.surface }]}
+        iconColor={paperTheme.colors.onSurface}
+        inputStyle={{ color: paperTheme.colors.onSurface }}
+        placeholderTextColor={paperTheme.colors.onSurfaceVariant}
       />
       
       {loading ? (
-        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+        <View style={[styles.loadingContainer, { backgroundColor: paperTheme.colors.background }]}>
+          <ActivityIndicator size="large" color={paperTheme.colors.primary} />
         </View>
       ) : filteredHistory.length > 0 ? (
         <FlatList
@@ -218,15 +220,15 @@ export default function HistoryScreen() {
           renderItem={renderHistoryItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
-          style={{ backgroundColor: theme.colors.background }}
+          style={{ backgroundColor: paperTheme.colors.background }}
         />
       ) : (
-        <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
-          <Text style={{ color: theme.colors.onBackground }} variant="bodyLarge">
+        <View style={[styles.emptyContainer, { backgroundColor: paperTheme.colors.background }]}>
+          <Text style={{ color: paperTheme.colors.onBackground }} variant="bodyLarge">
             No calculations found
           </Text>
           <Text 
-            style={[styles.emptySubtext, { color: theme.colors.onBackgroundVariant }]} 
+            style={[styles.emptySubtext, { color: paperTheme.colors.onBackgroundVariant }]} 
             variant="bodyMedium"
           >
             {searchQuery ? 'Try a different search term' : 'Your calculation history will appear here'}
