@@ -5,9 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MotiView } from 'moti';
-import { BlurView } from 'expo-blur';
 import { Animated } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import { resetSettings, clearCalculationHistory, getSettings, saveSettings } from '../utils/storage';
 import { useTheme } from '../context/ThemeContext';

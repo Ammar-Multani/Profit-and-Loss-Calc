@@ -21,8 +21,8 @@ import { v4 as uuidv4 } from 'uuid';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView } from 'moti';
 import { BlurView } from 'expo-blur';
+import { MotiView } from 'moti';
 
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
@@ -202,7 +202,7 @@ export default function HomeScreen() {
               size={24}
               iconColor={colors.primary}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                 navigation.navigate('Settings' as never);
               }}
               style={styles.headerIcon}
@@ -229,7 +229,7 @@ export default function HomeScreen() {
               size={24}
               iconColor={colors.primary}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                 navigation.navigate('History' as never);
               }}
               style={styles.headerIcon}
@@ -322,7 +322,7 @@ export default function HomeScreen() {
                       size={16}
                       iconColor={colors.textSecondary}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                         const currentValue = parseInt(units) || 0;
                         if (currentValue > 0) {
                           setUnits((currentValue - 1).toString());
@@ -334,7 +334,7 @@ export default function HomeScreen() {
                       size={16}
                       iconColor={colors.textSecondary}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                         const currentValue = parseInt(units) || 0;
                         setUnits((currentValue + 1).toString());
                       }}
@@ -346,7 +346,7 @@ export default function HomeScreen() {
               <TouchableOpacity 
                 style={styles.advancedToggle}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                   setShowAdvanced(!showAdvanced);
                 }}
               >
@@ -387,7 +387,7 @@ export default function HomeScreen() {
                           size={16}
                           iconColor={colors.textSecondary}
                           onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                             const currentValue = parseFloat(operatingExpenses) || 0;
                             if (currentValue > 0) {
                               setOperatingExpenses((currentValue - 1).toString());
@@ -399,7 +399,7 @@ export default function HomeScreen() {
                           size={16}
                           iconColor={colors.textSecondary}
                           onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                             const currentValue = parseFloat(operatingExpenses) || 0;
                             setOperatingExpenses((currentValue + 1).toString());
                           }}
@@ -493,7 +493,7 @@ export default function HomeScreen() {
                     size={20} 
                     iconColor={colors.primary} 
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
                       setShowChart(!showChart);
                     }}
                   />
