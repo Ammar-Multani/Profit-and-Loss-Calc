@@ -13,9 +13,10 @@ import * as Haptics from 'expo-haptics';
 
 import { getCalculationHistory, deleteCalculation } from '../utils/storage';
 import { HistoryItem } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 export default function HistoryScreen() {
-  const theme = useTheme();
+  const { colors } = useTheme();
   const navigation = useNavigation();
   
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -91,50 +92,58 @@ export default function HistoryScreen() {
     const isProfitable = item.result.netProfitLoss > 0;
     
     return (
-      <View style={styles.historyItem}>
+      <View style={[styles.historyItem, { backgroundColor: colors.surface }]}>
         <View style={styles.historyItemHeader}>
-          <Text style={styles.historyItemDate}>{formatDate(item.timestamp)}</Text>
+          <Text style={[styles.historyItemDate, { color: colors.textSecondary }]}>
+            {formatDate(item.timestamp)}
+          </Text>
           <IconButton
             icon="delete-outline"
             size={20}
-            color="#757575"
+            iconColor={colors.icon}
             onPress={() => handleDeleteItem(item.id)}
           />
         </View>
         
         <View style={styles.historyItemDetails}>
           <View style={styles.historyItemRow}>
-            <Text style={styles.historyItemLabel}>Entry Price:</Text>
-            <Text style={styles.historyItemValue}>{formatCurrency(item.entryPrice)}</Text>
+            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Entry Price:</Text>
+            <Text style={[styles.historyItemValue, { color: colors.text }]}>
+              {formatCurrency(item.entryPrice)}
+            </Text>
           </View>
           
           <View style={styles.historyItemRow}>
-            <Text style={styles.historyItemLabel}>Exit Price:</Text>
-            <Text style={styles.historyItemValue}>{formatCurrency(item.exitPrice)}</Text>
+            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Exit Price:</Text>
+            <Text style={[styles.historyItemValue, { color: colors.text }]}>
+              {formatCurrency(item.exitPrice)}
+            </Text>
           </View>
           
           <View style={styles.historyItemRow}>
-            <Text style={styles.historyItemLabel}>Quantity:</Text>
-            <Text style={styles.historyItemValue}>{item.quantity}</Text>
+            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Quantity:</Text>
+            <Text style={[styles.historyItemValue, { color: colors.text }]}>
+              {item.quantity}
+            </Text>
           </View>
           
-          <Divider style={styles.divider} />
+          <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           
           <View style={styles.historyItemRow}>
-            <Text style={styles.historyItemLabel}>Net Profit/Loss:</Text>
+            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Net Profit/Loss:</Text>
             <Text style={[
               styles.historyItemValue,
-              {color: isProfitable ? '#4CAF50' : '#F44336'}
+              {color: isProfitable ? colors.success : colors.error}
             ]}>
               {formatCurrency(item.result.netProfitLoss)}
             </Text>
           </View>
           
           <View style={styles.historyItemRow}>
-            <Text style={styles.historyItemLabel}>Return:</Text>
+            <Text style={[styles.historyItemLabel, { color: colors.textSecondary }]}>Return:</Text>
             <Text style={[
               styles.historyItemValue,
-              {color: isProfitable ? '#4CAF50' : '#F44336'}
+              {color: isProfitable ? colors.success : colors.error}
             ]}>
               {formatPercentage(item.result.profitLossPercentage)}
             </Text>
@@ -145,14 +154,18 @@ export default function HistoryScreen() {
   };
   
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { 
+        backgroundColor: colors.surface, 
+        borderBottomColor: colors.border 
+      }]}>
         <IconButton
           icon="arrow-left"
           size={24}
+          iconColor={colors.icon}
           onPress={() => navigation.goBack()}
         />
-        <Text style={styles.headerTitle}>Calculation History</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Calculation History</Text>
         <View style={{ width: 40 }} />
       </View>
       
@@ -160,8 +173,10 @@ export default function HistoryScreen() {
         placeholder="Search history"
         onChangeText={setSearchQuery}
         value={searchQuery}
-        style={styles.searchBar}
-        iconColor="#757575"
+        style={[styles.searchBar, { backgroundColor: colors.surface }]}
+        iconColor={colors.icon}
+        placeholderTextColor={colors.placeholder}
+        inputStyle={{ color: colors.text }}
       />
       
       {filteredHistory.length > 0 ? (
@@ -174,7 +189,7 @@ export default function HistoryScreen() {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             {history.length > 0 
               ? 'No results found for your search.' 
               : 'No calculation history yet.'}
@@ -188,7 +203,6 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   header: {
     flexDirection: 'row',
