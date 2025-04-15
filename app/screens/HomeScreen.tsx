@@ -6,35 +6,31 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Animated,
+  Platform
 } from 'react-native';
 import { 
   Text, 
   IconButton,
-  Divider,
+  Divider
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { v4 as uuidv4 } from 'uuid';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { MotiView } from 'moti';
+import { DonutChart } from 'react-native-gifted-charts';
+import LinearGradient from 'react-native-linear-gradient';
 
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
 import { TradeCalculation } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import ResultsChart from '../components/ResultsChart';
 import CircularProgressDisplay from '../components/CircularProgressDisplay';
-import Card from '../components/Card';
-import Button from '../components/Button';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { colors, isDarkMode, spacing, roundness } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   
   const [buyingPrice, setBuyingPrice] = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
@@ -49,11 +45,6 @@ export default function HomeScreen() {
   const [calculatorMode, setCalculatorMode] = useState('standard');
   const [results, setResults] = useState(null);
   const [showChart, setShowChart] = useState(false);
-  
-  const fadeAnim1 = React.useRef(new Animated.Value(0)).current;
-  const translateYAnim1 = React.useRef(new Animated.Value(20)).current;
-  const fadeAnim2 = React.useRef(new Animated.Value(0)).current;
-  const translateYAnim2 = React.useRef(new Animated.Value(20)).current;
   
   useEffect(() => {
     const loadCalculatorMode = async () => {
@@ -171,6 +162,39 @@ export default function HomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   
+  const getDonutChartData = () => {
+    if (!results) return [];
+    
+    const total = results.revenue;
+    
+    return [
+      {
+        value: results.costOfGoodsSold,
+        color: '#A0887E',
+        text: `${((results.costOfGoodsSold / total) * 100).toFixed(2)}%`,
+        name: 'Cost of goods sold'
+      },
+      {
+        value: results.totalExpenses,
+        color: '#FFA07A',
+        text: `${((results.totalExpenses / total) * 100).toFixed(2)}%`,
+        name: 'Selling and operating expenses'
+      },
+      {
+        value: results.taxAmount,
+        color: '#F08080',
+        text: `${((results.taxAmount / total) * 100).toFixed(2)}%`,
+        name: 'Taxes'
+      },
+      {
+        value: results.netProfit,
+        color: '#8FBC8F',
+        text: `${((results.netProfit / total) * 100).toFixed(2)}%`,
+        name: 'Net profit margin'
+      }
+    ];
+  };
+  
   const renderResultsChart = () => {
     if (!results) return null;
     
@@ -186,607 +210,428 @@ export default function HomeScreen() {
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#F5F5F5' }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <View style={[styles.header, { backgroundColor: colors.backgroundSecondary }]}>
-          <MotiView
-            from={{ opacity: 0, translateY: -10 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 500 }}
-          >
-            <IconButton
-              icon="account-outline"
-              size={24}
-              iconColor={colors.primary}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                navigation.navigate('Settings' as never);
-              }}
-              style={styles.headerIcon}
-            />
-          </MotiView>
-          
-          <MotiView
-            from={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ type: 'timing', duration: 500, delay: 100 }}
-          >
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Profit Calculator
-            </Text>
-          </MotiView>
-          
-          <MotiView
-            from={{ opacity: 0, translateY: -10 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 500 }}
-          >
-            <IconButton
-              icon="history"
-              size={24}
-              iconColor={colors.primary}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                navigation.navigate('History' as never);
-              }}
-              style={styles.headerIcon}
-            />
-          </MotiView>
+        <View style={[styles.header, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5' }]}>
+          <IconButton
+            icon="account-outline"
+            size={24}
+            iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'}
+            onPress={() => navigation.navigate('Settings' as never)}
+          />
+          <IconButton
+            icon="file-pdf-box"
+            size={24}
+            iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'}
+            onPress={saveToHistory}
+          />
         </View>
         
-        <ScrollView 
-          style={styles.scrollView} 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollViewContent}
-        >
-          <Animated.View
-            style={{
-              opacity: fadeAnim1,
-              transform: [{ translateY: translateYAnim1 }],
-            }}
-          >
-            <Card elevation="md" animated>
-              <View style={styles.cardHeader}>
-                <Text style={[styles.cardTitle, { color: colors.primary }]}>
-                  Calculator
-                </Text>
-                <View style={styles.cardActions}>
-                  <IconButton 
-                    icon="refresh" 
-                    size={20} 
-                    iconColor={colors.primary} 
-                    onPress={resetCalculator}
-                  />
-                  <IconButton 
-                    icon="content-save" 
-                    size={20} 
-                    iconColor={colors.primary} 
-                    onPress={saveToHistory}
-                  />
-                </View>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={[styles.mainCard, { backgroundColor: isDarkMode ? '#1E1E1E' : 'white' }]}>
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: isDarkMode ? '#90CAF9' : '#2196F3' }]}>Calculator</Text>
+              <View style={styles.cardActions}>
+                <IconButton icon="information-outline" size={20} iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'} />
+                <IconButton icon="calculator-variant" size={20} iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'} />
               </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                  Buying price
-                </Text>
-                <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.currencySymbol, { color: colors.textSecondary }]}>$</Text>
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    value={buyingPrice}
-                    onChangeText={setBuyingPrice}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.placeholder}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                  Selling price
-                </Text>
-                <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.currencySymbol, { color: colors.textSecondary }]}>$</Text>
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    value={sellingPrice}
-                    onChangeText={setSellingPrice}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.placeholder}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                  Expected sale units
-                </Text>
-                <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                  <TextInput
-                    style={[styles.input, { color: colors.text }]}
-                    value={units}
-                    onChangeText={setUnits}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.placeholder}
-                  />
-                  <View style={styles.quantityButtons}>
-                    <IconButton 
-                      icon="minus" 
-                      size={16}
-                      iconColor={colors.textSecondary}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                        const currentValue = parseInt(units) || 0;
-                        if (currentValue > 0) {
-                          setUnits((currentValue - 1).toString());
-                        }
-                      }}
-                    />
-                    <IconButton 
-                      icon="plus" 
-                      size={16}
-                      iconColor={colors.textSecondary}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                        const currentValue = parseInt(units) || 0;
-                        setUnits((currentValue + 1).toString());
-                      }}
-                    />
-                  </View>
-                </View>
-              </View>
-              
-              <TouchableOpacity 
-                style={styles.advancedToggle}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                  setShowAdvanced(!showAdvanced);
-                }}
-              >
-                <Text style={[styles.advancedToggleText, { color: colors.primary }]}>
-                  {showAdvanced ? 'HIDE ADVANCED OPTIONS' : 'SHOW ADVANCED OPTIONS'}
-                </Text>
-                <IconButton 
-                  icon={showAdvanced ? "chevron-up" : "chevron-down"} 
-                  size={20} 
-                  iconColor={colors.primary}
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Buying price</Text>
+              <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
+                <TextInput
+                  style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                  value={buyingPrice}
+                  onChangeText={setBuyingPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                 />
-              </TouchableOpacity>
-              
-              {showAdvanced && (
-                <MotiView
-                  from={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  transition={{ type: 'timing', duration: 300 }}
-                  style={styles.advancedSection}
-                >
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                      Operating expenses
-                    </Text>
-                    <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                      <Text style={[styles.currencySymbol, { color: colors.textSecondary }]}>$</Text>
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        value={operatingExpenses}
-                        onChangeText={setOperatingExpenses}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={colors.placeholder}
-                      />
-                      <View style={styles.quantityButtons}>
-                        <IconButton 
-                          icon="minus" 
-                          size={16}
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                            const currentValue = parseFloat(operatingExpenses) || 0;
-                            if (currentValue > 0) {
-                              setOperatingExpenses((currentValue - 1).toString());
-                            }
-                          }}
-                        />
-                        <IconButton 
-                          icon="plus" 
-                          size={16}
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                            const currentValue = parseFloat(operatingExpenses) || 0;
-                            setOperatingExpenses((currentValue + 1).toString());
-                          }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                      Buying expenses per unit
-                    </Text>
-                    <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                      <Text style={[styles.currencySymbol, { color: colors.textSecondary }]}>$</Text>
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        value={buyingExpensesPerUnit}
-                        onChangeText={setBuyingExpensesPerUnit}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={colors.placeholder}
-                      />
-                      <IconButton 
-                        icon="information-outline" 
-                        size={20} 
-                        iconColor={colors.textSecondary} 
-                      />
-                    </View>
-                  </View>
-                  
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                      Selling expenses per unit
-                    </Text>
-                    <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                      <Text style={[styles.currencySymbol, { color: colors.textSecondary }]}>$</Text>
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        value={sellingExpensesPerUnit}
-                        onChangeText={setSellingExpensesPerUnit}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={colors.placeholder}
-                      />
-                      <IconButton 
-                        icon="information-outline" 
-                        size={20} 
-                        iconColor={colors.textSecondary} 
-                      />
-                    </View>
-                  </View>
-                  
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-                      Tax rate
-                    </Text>
-                    <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-                      <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        value={taxRate}
-                        onChangeText={setTaxRate}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={colors.placeholder}
-                      />
-                      <Text style={[styles.percentSymbol, { color: colors.textSecondary }]}>%</Text>
-                    </View>
-                  </View>
-                </MotiView>
-              )}
-            </Card>
-          </Animated.View>
-          
-          {results && (
-            <Animated.View
-              style={[
-                styles.resultsCardContainer,
-                {
-                  opacity: fadeAnim2,
-                  transform: [{ translateY: translateYAnim2 }],
-                }
-              ]}
-            >
-              <Card elevation="md" animated>
-                <View style={styles.cardHeader}>
-                  <Text style={[styles.cardTitle, { color: colors.primary }]}>
-                    Results
-                  </Text>
+              </View>
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling price</Text>
+              <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
+                <TextInput
+                  style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                  value={sellingPrice}
+                  onChangeText={setSellingPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
+                />
+              </View>
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Expected sale units</Text>
+              <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                <TextInput
+                  style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                  value={units}
+                  onChangeText={setUnits}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
+                />
+                <View style={styles.quantityButtons}>
                   <IconButton 
-                    icon={showChart ? "chart-box-outline" : "chart-donut"} 
-                    size={20} 
-                    iconColor={colors.primary} 
+                    icon="minus" 
+                    size={16}
+                    iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackType.Light);
-                      setShowChart(!showChart);
+                      const currentValue = parseInt(units) || 0;
+                      if (currentValue > 0) {
+                        setUnits((currentValue - 1).toString());
+                      }
+                    }}
+                  />
+                  <IconButton 
+                    icon="plus" 
+                    size={16}
+                    iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      setUnits((currentValue + 1).toString());
                     }}
                   />
                 </View>
-                
-                {showChart ? (
-                  <View style={styles.chartContainer}>
-                    {renderResultsChart()}
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.advancedToggle}
+              onPress={() => setShowAdvanced(!showAdvanced)}
+            >
+              <Text style={[styles.advancedToggleText, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>ADVANCED</Text>
+              <IconButton 
+                icon={showAdvanced ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={isDarkMode ? '#BBBBBB' : '#757575'}
+              />
+            </TouchableOpacity>
+            
+            {showAdvanced && (
+              <View style={styles.advancedSection}>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Operating expenses</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
+                    <TextInput
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                      value={operatingExpenses}
+                      onChangeText={setOperatingExpenses}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
+                    />
+                    <View style={styles.quantityButtons}>
+                      <IconButton 
+                        icon="minus" 
+                        size={16}
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                        onPress={() => {
+                          const currentValue = parseFloat(operatingExpenses) || 0;
+                          if (currentValue > 0) {
+                            setOperatingExpenses((currentValue - 1).toString());
+                          }
+                        }}
+                      />
+                      <IconButton 
+                        icon="plus" 
+                        size={16}
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                        onPress={() => {
+                          const currentValue = parseFloat(operatingExpenses) || 0;
+                          setOperatingExpenses((currentValue + 1).toString());
+                        }}
+                      />
+                    </View>
                   </View>
-                ) : (
-                  <>
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Revenue
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Buying expenses per unit</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
+                    <TextInput
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                      value={buyingExpensesPerUnit}
+                      onChangeText={setBuyingExpensesPerUnit}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
+                    />
+                    <IconButton 
+                      icon="dots-vertical" 
+                      size={20} 
+                      iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                    />
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling expenses per unit</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
+                    <TextInput
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                      value={sellingExpensesPerUnit}
+                      onChangeText={setSellingExpensesPerUnit}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
+                    />
+                    <IconButton 
+                      icon="dots-vertical" 
+                      size={20} 
+                      iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                    />
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Tax rate</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <TextInput
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
+                      value={taxRate}
+                      onChangeText={setTaxRate}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
+                    />
+                    <Text style={[styles.percentSymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>%</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+          
+          {results && (
+            <View style={[styles.mainCard, { backgroundColor: isDarkMode ? '#1E1E1E' : 'white' }]}>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.cardTitle, { color: isDarkMode ? '#90CAF9' : '#2196F3' }]}>Results</Text>
+                <IconButton 
+                  icon="chart-donut" 
+                  size={20} 
+                  color={isDarkMode ? '#90CAF9' : '#2196F3'} 
+                  onPress={() => setShowChart(!showChart)}
+                />
+              </View>
+              
+              {showChart ? (
+                <View style={styles.chartContainer}>
+                  {renderResultsChart()}
+                </View>
+              ) : (
+                <>
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Revenue</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.revenue)}
                       </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[styles.resultValue, { color: colors.text }]}>
-                          {formatCurrency(results.revenue)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Cost of goods sold
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[styles.resultValue, { color: colors.text }]}>
-                          {formatCurrency(results.costOfGoodsSold)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Gross profit
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[
-                          styles.resultValue, 
-                          {color: results.grossProfit >= 0 ? colors.success : colors.error}
-                        ]}>
-                          {formatCurrency(results.grossProfit)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary} 
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Gross profit margin
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[
-                          styles.resultValue, 
-                          {color: results.grossProfitMargin >= 0 ? colors.success : colors.error}
-                        ]}>
-                          {formatPercentage(results.grossProfitMargin)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary} 
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    {showAdvanced && (
-                      <>
-                        <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                          <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                            Selling and operating expenses
-                          </Text>
-                          <View style={styles.resultValueContainer}>
-                            <Text style={[styles.resultValue, {color: colors.error}]}>
-                              {formatCurrency(results.totalExpenses)}
-                            </Text>
-                            <IconButton 
-                              icon="content-copy" 
-                              size={16} 
-                              iconColor={colors.textSecondary} 
-                              onPress={() => {
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                              }}
-                            />
-                          </View>
-                        </View>
-                        
-                        <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                          <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                            Operating profit
-                          </Text>
-                          <View style={styles.resultValueContainer}>
-                            <Text style={[
-                              styles.resultValue, 
-                              {color: results.operatingProfit >= 0 ? colors.success : colors.error}
-                            ]}>
-                              {formatCurrency(results.operatingProfit)}
-                            </Text>
-                            <IconButton 
-                              icon="content-copy" 
-                              size={16} 
-                              iconColor={colors.textSecondary} 
-                              onPress={() => {
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                              }}
-                            />
-                          </View>
-                        </View>
-                      </>
-                    )}
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Net profit margin
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[
-                          styles.resultValue, 
-                          {color: results.netProfitMargin >= 0 ? colors.success : colors.error}
-                        ]}>
-                          {formatPercentage(results.netProfitMargin)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    {showAdvanced && parseFloat(taxRate) > 0 && (
-                      <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                        <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                          Tax amount
-                        </Text>
-                        <View style={styles.resultValueContainer}>
-                          <Text style={[styles.resultValue, {color: colors.error}]}>
-                            {formatCurrency(results.taxAmount)}
-                          </Text>
-                          <IconButton 
-                            icon="content-copy" 
-                            size={16} 
-                            iconColor={colors.textSecondary} 
-                            onPress={() => {
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            }}
-                          />
-                        </View>
-                      </View>
-                    )}
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Net profit
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[
-                          styles.resultValue, 
-                          {color: results.netProfit >= 0 ? colors.success : colors.error}
-                        ]}>
-                          {formatCurrency(results.netProfit)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-                    
-                    <Text style={[styles.additionalMetricsLabel, { color: colors.textSecondary }]}>
-                      Additional metrics
-                    </Text>
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Cost of investment
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[styles.resultValue, { color: colors.text }]}>
-                          {formatCurrency(results.investment)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    {results.breakEvenUnits > 0 && (
-                      <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                        <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                          Break-even units
-                        </Text>
-                        <View style={styles.resultValueContainer}>
-                          <Text style={[styles.resultValue, { color: colors.text }]}>
-                            {results.breakEvenUnits}
-                          </Text>
-                          <IconButton 
-                            icon="content-copy" 
-                            size={16} 
-                            iconColor={colors.textSecondary} 
-                            onPress={() => {
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            }}
-                          />
-                        </View>
-                      </View>
-                    )}
-                    
-                    <View style={[styles.resultRow, { borderBottomColor: colors.borderLight }]}>
-                      <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
-                        Return on investment
-                      </Text>
-                      <View style={styles.resultValueContainer}>
-                        <Text style={[
-                          styles.resultValue, 
-                          {color: results.roi >= 0 ? colors.success : colors.error}
-                        ]}>
-                          {formatPercentage(results.roi)}
-                        </Text>
-                        <IconButton 
-                          icon="content-copy" 
-                          size={16} 
-                          iconColor={colors.textSecondary}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }}
-                        />
-                      </View>
-                    </View>
-                    
-                    <View style={styles.actionButtonsContainer}>
-                      <Button
-                        title="Save to History"
-                        onPress={saveToHistory}
-                        icon={<IconButton icon="content-save-outline" size={18} iconColor="#FFFFFF" />}
-                        iconPosition="left"
-                        style={styles.actionButton}
-                      />
-                      <Button
-                        title="Reset"
-                        onPress={resetCalculator}
-                        variant="outlined"
-                        color="neutral"
-                        icon={<IconButton icon="refresh" size={18} iconColor={colors.text} />}
-                        iconPosition="left"
-                        style={styles.actionButton}
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
                       />
                     </View>
-                  </>
-                )}
-              </Card>
-            </Animated.View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of goods sold</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.costOfGoodsSold)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Gross profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.grossProfit)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} color="#757575" />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Gross profit margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.grossProfitMargin)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} color="#757575" />
+                    </View>
+                  </View>
+                  
+                  {showAdvanced && (
+                    <>
+                      <View style={styles.resultRow}>
+                        <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling and operating expenses</Text>
+                        <View style={styles.resultValueContainer}>
+                          <Text style={[styles.resultValue, {color: '#F44336'}]}>
+                            {formatCurrency(results.totalExpenses)}
+                          </Text>
+                          <IconButton icon="content-copy" size={16} color="#757575" />
+                        </View>
+                      </View>
+                      
+                      <View style={styles.resultRow}>
+                        <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Operating profit</Text>
+                        <View style={styles.resultValueContainer}>
+                          <Text style={[
+                            styles.resultValue, 
+                            {color: results.operatingProfit >= 0 ? '#4CAF50' : '#F44336'}
+                          ]}>
+                            {formatCurrency(results.operatingProfit)}
+                          </Text>
+                          <IconButton icon="content-copy" size={16} color="#757575" />
+                        </View>
+                      </View>
+                    </>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Net profit margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.netProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.netProfitMargin)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  {showAdvanced && parseFloat(taxRate) > 0 && (
+                    <View style={styles.resultRow}>
+                      <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Tax amount</Text>
+                      <View style={styles.resultValueContainer}>
+                        <Text style={[styles.resultValue, {color: '#F44336'}]}>
+                          {formatCurrency(results.taxAmount)}
+                        </Text>
+                        <IconButton icon="content-copy" size={16} color="#757575" />
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Net profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.netProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.netProfit)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <Divider style={[styles.divider, { backgroundColor: isDarkMode ? '#333333' : '#F0F0F0' }]} />
+                  <Text style={[styles.additionalMetricsLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>
+                    Additional metrics
+                  </Text>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of investment</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.investment)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  {results.breakEvenUnits > 0 && (
+                    <View style={styles.resultRow}>
+                      <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Break-even units</Text>
+                      <View style={styles.resultValueContainer}>
+                        <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                          {results.breakEvenUnits}
+                        </Text>
+                        <IconButton 
+                          icon="content-copy" 
+                          size={16} 
+                          iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                        />
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Return on investment</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.roi >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.roi)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                </>
+              )}
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -804,31 +649,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    zIndex: 10,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerIcon: {
-    margin: 0,
+    paddingVertical: 8,
   },
   scrollView: {
     flex: 1,
+    paddingHorizontal: 16,
   },
-  scrollViewContent: {
+  mainCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 16,
     padding: 16,
-    paddingBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -838,7 +675,8 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
+    color: '#2196F3',
   },
   cardActions: {
     flexDirection: 'row',
@@ -848,25 +686,30 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
+    color: '#757575',
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   currencySymbol: {
     fontSize: 16,
+    color: '#757575',
     paddingRight: 8,
   },
   percentSymbol: {
     fontSize: 16,
+    color: '#757575',
     paddingLeft: 8,
   },
   input: {
     flex: 1,
     fontSize: 16,
     paddingVertical: 8,
+    color: '#212121',
   },
   quantityButtons: {
     flexDirection: 'row',
@@ -881,13 +724,10 @@ const styles = StyleSheet.create({
   advancedToggleText: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#757575',
   },
   advancedSection: {
     marginTop: 8,
-    overflow: 'hidden',
-  },
-  resultsCardContainer: {
-    marginTop: 16,
   },
   resultRow: {
     flexDirection: 'row',
@@ -895,10 +735,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   resultLabel: {
     fontSize: 14,
-    flex: 1,
+    color: '#757575',
   },
   resultValueContainer: {
     flexDirection: 'row',
@@ -907,12 +748,14 @@ const styles = StyleSheet.create({
   resultValue: {
     fontSize: 16,
     fontWeight: '500',
+    color: '#212121',
   },
   divider: {
     marginVertical: 16,
   },
   additionalMetricsLabel: {
     fontSize: 14,
+    color: '#757575',
     marginBottom: 8,
   },
   chartContainer: {
@@ -921,13 +764,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 16,
+  },
+  donutChartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  legendContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
     marginTop: 24,
   },
-  actionButton: {
-    flex: 1,
-    marginHorizontal: 4,
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  legendText: {
+    fontSize: 14,
+    color: '#757575',
+  },
+  simpleChartContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  simpleDonut: {
+    flexDirection: 'row',
+    height: 30,
+    width: '100%',
+    borderRadius: 15,
+    overflow: 'hidden',
+    marginVertical: 20,
+  },
+  donutSegment: {
+    height: '100%',
   },
 });

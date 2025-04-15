@@ -5,20 +5,11 @@ import { PaperProvider } from 'react-native-paper';
 import { NavigationContainer, DefaultTheme as NavigationDefaultTheme, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PortalProvider } from '@gorhom/portal';
-import { LogBox } from 'react-native';
 
 import HomeScreen from './app/screens/HomeScreen';
 import SettingsScreen from './app/screens/SettingsScreen';
 import HistoryScreen from './app/screens/HistoryScreen';
 import { ThemeProvider, useTheme } from './app/context/ThemeContext';
-
-// Ignore specific warnings
-LogBox.ignoreLogs([
-  'ViewPropTypes will be removed',
-  'ColorPropType will be removed',
-]);
 
 const Stack = createNativeStackNavigator();
 
@@ -48,8 +39,7 @@ function AppContent() {
             headerShown: false,
             contentStyle: {
               backgroundColor: theme.colors.background,
-            },
-            animation: 'slide_from_right',
+            }
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />
@@ -63,15 +53,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <PortalProvider>
-            <AppContent />
-          </PortalProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
