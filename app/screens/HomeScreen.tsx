@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { v4 as uuidv4 } from 'uuid';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DonutChart } from 'react-native-gifted-charts';
 
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
@@ -45,6 +46,9 @@ export default function HomeScreen() {
   
   // Results
   const [results, setResults] = useState(null);
+  
+  // Chart view
+  const [showChart, setShowChart] = useState(false);
   
   // Load calculator mode on mount
   useEffect(() => {
@@ -94,45 +98,45 @@ export default function HomeScreen() {
     const totalSellingExpenses = sellExpenses * quantity;
     const totalExpenses = opExpenses + totalBuyingExpenses + totalSellingExpenses;
     
-    // Calculate profit before tax
-    const profitBeforeTax = revenue - costOfGoodsSold - totalExpenses;
+    // Calculate gross profit
+    const grossProfit = revenue - costOfGoodsSold;
     
-    // Calculate tax amount
-    const taxAmount = profitBeforeTax > 0 ? (profitBeforeTax * (tax / 100)) : 0;
+    // Calculate gross profit margin
+    const grossProfitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
     
-    // Calculate net profit
-    const netProfit = profitBeforeTax - taxAmount;
+    // Calculate operating profit
+    const operatingProfit = grossProfit - totalExpenses;
     
     // Calculate net profit margin
-    const netProfitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+    const netProfitMargin = revenue > 0 ? (operatingProfit / revenue) * 100 : 0;
+    
+    // Calculate tax amount
+    const taxAmount = operatingProfit > 0 ? (operatingProfit * (tax / 100)) : 0;
+    
+    // Calculate net profit
+    const netProfit = operatingProfit - taxAmount;
     
     // Calculate return on investment
-    const investment = costOfGoodsSold;
+    const investment = costOfGoodsSold + totalBuyingExpenses;
     const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
     
-    // Additional metrics for professional mode
-    let additionalMetrics = {};
-    if (calculatorMode === 'professional') {
-      const grossProfit = revenue - costOfGoodsSold;
-      const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-      const breakEvenUnits = opExpenses > 0 ? 
-        opExpenses / ((sellPrice - buyPrice) - (buyExpenses + sellExpenses)) : 0;
-      
-      additionalMetrics = {
-        grossProfit,
-        grossMargin,
-        breakEvenUnits
-      };
-    }
+    // Calculate break-even units
+    const unitContribution = sellPrice - buyPrice - buyExpenses - sellExpenses;
+    const breakEvenUnits = unitContribution > 0 ? Math.ceil(opExpenses / unitContribution) : 0;
     
     setResults({
       revenue,
       costOfGoodsSold,
+      grossProfit,
+      grossProfitMargin,
+      totalExpenses,
+      operatingProfit,
       netProfitMargin,
+      taxAmount,
       netProfit,
       investment,
       roi,
-      ...additionalMetrics
+      breakEvenUnits
     });
   };
   
@@ -179,7 +183,41 @@ export default function HomeScreen() {
     setSellingExpensesPerUnit('0');
     setTaxRate('0');
     setResults(null);
+    setShowChart(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
+  const getDonutChartData = () => {
+    if (!results) return [];
+    
+    const total = results.revenue;
+    
+    return [
+      {
+        value: results.costOfGoodsSold,
+        color: '#A0887E',
+        text: `${((results.costOfGoodsSold / total) * 100).toFixed(2)}%`,
+        name: 'Cost of goods sold'
+      },
+      {
+        value: results.totalExpenses,
+        color: '#FFA07A',
+        text: `${((results.totalExpenses / total) * 100).toFixed(2)}%`,
+        name: 'Selling and operating expenses'
+      },
+      {
+        value: results.taxAmount,
+        color: '#F08080',
+        text: `${((results.taxAmount / total) * 100).toFixed(2)}%`,
+        name: 'Taxes'
+      },
+      {
+        value: results.netProfit,
+        color: '#8FBC8F',
+        text: `${((results.netProfit / total) * 100).toFixed(2)}%`,
+        name: 'Net profit margin'
+      }
+    ];
   };
   
   return (
@@ -371,41 +409,72 @@ export default function HomeScreen() {
             <View style={styles.mainCard}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Results</Text>
-                <IconButton icon="chart-line" size={20} color="#2196F3" />
+                <IconButton 
+                  icon="chart-donut" 
+                  size={20} 
+                  color="#2196F3" 
+                  onPress={() => setShowChart(!showChart)}
+                />
               </View>
               
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Revenue</Text>
-                <View style={styles.resultValueContainer}>
-                  <Text style={styles.resultValue}>{formatCurrency(results.revenue)}</Text>
-                  <IconButton 
-                    icon="content-copy" 
-                    size={16} 
-                    color="#757575"
-                    onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }}
-                  />
+              {showChart ? (
+                <View style={styles.chartContainer}>
+                  <Text style={styles.chartTitle}>Breakdown</Text>
+                  <View style={styles.donutChartContainer}>
+                    <DonutChart
+                      data={getDonutChartData()}
+                      radius={80}
+                      innerRadius={40}
+                      innerCircleColor={'white'}
+                      showText
+                      textColor={'black'}
+                      textSize={12}
+                      showValuesAsLabels={false}
+                      showGradient={false}
+                    />
+                  </View>
+                  
+                  <View style={styles.legendContainer}>
+                    {getDonutChartData().map((item, index) => (
+                      <View key={index} style={styles.legendItem}>
+                        <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+                        <Text style={styles.legendText}>{item.name} ({item.text})</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-              
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Cost of goods sold</Text>
-                <View style={styles.resultValueContainer}>
-                  <Text style={styles.resultValue}>{formatCurrency(results.costOfGoodsSold)}</Text>
-                  <IconButton 
-                    icon="content-copy" 
-                    size={16} 
-                    color="#757575"
-                    onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }}
-                  />
-                </View>
-              </View>
-              
-              {calculatorMode === 'professional' && (
+              ) : (
                 <>
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Revenue</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={styles.resultValue}>{formatCurrency(results.revenue)}</Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Cost of goods sold</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={styles.resultValue}>{formatCurrency(results.costOfGoodsSold)}</Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
                   <View style={styles.resultRow}>
                     <Text style={styles.resultLabel}>Gross profit</Text>
                     <View style={styles.resultValueContainer}>
@@ -420,106 +489,145 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Gross margin</Text>
+                    <Text style={styles.resultLabel}>Gross profit margin</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={[
                         styles.resultValue, 
-                        {color: results.grossMargin >= 0 ? '#4CAF50' : '#F44336'}
+                        {color: results.grossProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
                       ]}>
-                        {formatPercentage(results.grossMargin)}
+                        {formatPercentage(results.grossProfitMargin)}
                       </Text>
                       <IconButton icon="content-copy" size={16} color="#757575" />
                     </View>
                   </View>
-                </>
-              )}
-              
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Net profit margin</Text>
-                <View style={styles.resultValueContainer}>
-                  <Text style={[
-                    styles.resultValue, 
-                    {color: results.netProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
-                  ]}>
-                    {formatPercentage(results.netProfitMargin)}
-                  </Text>
-                  <IconButton 
-                    icon="content-copy" 
-                    size={16} 
-                    color="#757575"
-                    onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Net profit</Text>
-                <View style={styles.resultValueContainer}>
-                  <Text style={[
-                    styles.resultValue, 
-                    {color: results.netProfit >= 0 ? '#4CAF50' : '#F44336'}
-                  ]}>
-                    {formatCurrency(results.netProfit)}
-                  </Text>
-                  <IconButton 
-                    icon="content-copy" 
-                    size={16} 
-                    color="#757575"
-                    onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }}
-                  />
-                </View>
-              </View>
-              
-              <Divider style={styles.divider} />
-              <Text style={styles.additionalMetricsLabel}>Additional metrics</Text>
-              
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Cost of investment</Text>
-                <View style={styles.resultValueContainer}>
-                  <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
-                  <IconButton 
-                    icon="content-copy" 
-                    size={16} 
-                    color="#757575"
-                    onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }}
-                  />
-                </View>
-              </View>
-              
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Return on investment</Text>
-                <View style={styles.resultValueContainer}>
-                  <Text style={[
-                    styles.resultValue, 
-                    {color: results.roi >= 0 ? '#4CAF50' : '#F44336'}
-                  ]}>
-                    {formatPercentage(results.roi)}
-                  </Text>
-                  <IconButton 
-                    icon="content-copy" 
-                    size={16} 
-                    color="#757575"
-                    onPress={() => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }}
-                  />
-                </View>
-              </View>
-              
-              {calculatorMode === 'professional' && results.breakEvenUnits > 0 && (
-                <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Break-even units</Text>
-                  <View style={styles.resultValueContainer}>
-                    <Text style={styles.resultValue}>{Math.ceil(results.breakEvenUnits)}</Text>
-                    <IconButton icon="content-copy" size={16} color="#757575" />
+                  
+                  {showAdvanced && (
+                    <>
+                      <View style={styles.resultRow}>
+                        <Text style={styles.resultLabel}>Selling and operating expenses</Text>
+                        <View style={styles.resultValueContainer}>
+                          <Text style={[styles.resultValue, {color: '#F44336'}]}>
+                            {formatCurrency(results.totalExpenses)}
+                          </Text>
+                          <IconButton icon="content-copy" size={16} color="#757575" />
+                        </View>
+                      </View>
+                      
+                      <View style={styles.resultRow}>
+                        <Text style={styles.resultLabel}>Operating profit</Text>
+                        <View style={styles.resultValueContainer}>
+                          <Text style={[
+                            styles.resultValue, 
+                            {color: results.operatingProfit >= 0 ? '#4CAF50' : '#F44336'}
+                          ]}>
+                            {formatCurrency(results.operatingProfit)}
+                          </Text>
+                          <IconButton icon="content-copy" size={16} color="#757575" />
+                        </View>
+                      </View>
+                    </>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Net profit margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.netProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.netProfitMargin)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
                   </View>
-                </View>
+                  
+                  {showAdvanced && parseFloat(taxRate) > 0 && (
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>Tax amount</Text>
+                      <View style={styles.resultValueContainer}>
+                        <Text style={[styles.resultValue, {color: '#F44336'}]}>
+                          {formatCurrency(results.taxAmount)}
+                        </Text>
+                        <IconButton icon="content-copy" size={16} color="#757575" />
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Net profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.netProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.netProfit)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  <Divider style={styles.divider} />
+                  <Text style={styles.additionalMetricsLabel}>Additional metrics</Text>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Cost of investment</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                  
+                  {results.breakEvenUnits > 0 && (
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>Break-even units</Text>
+                      <View style={styles.resultValueContainer}>
+                        <Text style={styles.resultValue}>{results.breakEvenUnits}</Text>
+                        <IconButton icon="content-copy" size={16} color="#757575" />
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Return on investment</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.roi >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.roi)}
+                      </Text>
+                      <IconButton 
+                        icon="content-copy" 
+                        size={16} 
+                        color="#757575"
+                        onPress={() => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }}
+                      />
+                    </View>
+                  </View>
+                </>
               )}
             </View>
           )}
@@ -648,5 +756,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#757575',
     marginBottom: 8,
+  },
+  chartContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 16,
+  },
+  donutChartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  legendContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  legendText: {
+    fontSize: 14,
+    color: '#757575',
   },
 });
