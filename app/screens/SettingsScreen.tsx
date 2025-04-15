@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Share } from 'react-native';
-import { Text, IconButton, useTheme, Dialog, Portal, RadioButton } from 'react-native-paper';
+import { Text, IconButton, useTheme, Dialog, Portal, RadioButton, Divider } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -123,7 +123,7 @@ export default function SettingsScreen() {
   const handleShareApp = async () => {
     try {
       await Share.share({
-        message: 'Check out this amazing Profit & Loss Calculator app!',
+        message: 'Check out this amazing Forex Pip Calculator app!',
         url: 'https://example.com/app',
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -134,23 +134,25 @@ export default function SettingsScreen() {
   
   const handleRateApp = () => {
     Linking.openURL('https://play.google.com/store/apps/details?id=com.example.app');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackStyle.Light);
   };
   
   const handleOpenLink = (url) => {
     Linking.openURL(url);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackStyle.Light);
   };
   
   const handleSubmitBugReport = () => {
     Linking.openURL('mailto:support@example.com?subject=Bug%20Report');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackStyle.Light);
   };
   
   const renderSettingItem = (icon, title, onPress, showChevron = true) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingItemLeft}>
-        <IconButton icon={icon} size={24} />
+        <View style={styles.settingIconContainer}>
+          <IconButton icon={icon} size={20} style={styles.settingIcon} />
+        </View>
         <Text style={styles.settingItemText}>{title}</Text>
       </View>
       {showChevron && <IconButton icon="chevron-right" size={24} />}
@@ -161,52 +163,66 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <IconButton
-          icon="close"
+          icon="arrow-left"
           size={24}
           onPress={() => navigation.goBack()}
         />
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={{ width: 40 }} />
       </View>
       
-      <Text style={styles.sectionTitle}>APPLICATION SETTINGS</Text>
-      
       <ScrollView style={styles.scrollView}>
-        {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
-        {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
-        {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>APPLICATION SETTINGS</Text>
+          
+          {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
+          {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
+          {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
+        </View>
         
-        <Text style={styles.sectionTitle}>LEGAL</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>LEGAL</Text>
+          
+          {renderSettingItem('file-document-outline', 'Terms of service', () => 
+            handleOpenLink('https://example.com/terms'))}
+          {renderSettingItem('alert-circle-outline', 'Disclaimer', () => 
+            handleOpenLink('https://example.com/disclaimer'))}
+        </View>
         
-        {renderSettingItem('file-document-outline', 'Terms of service', () => 
-          handleOpenLink('https://example.com/terms'))}
-        {renderSettingItem('alert-circle-outline', 'Disclaimer', () => 
-          handleOpenLink('https://example.com/disclaimer'))}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>PRIVACY</Text>
+          
+          {renderSettingItem('shield-account', 'Privacy policy', () => 
+            handleOpenLink('https://example.com/privacy'))}
+        </View>
         
-        <Text style={styles.sectionTitle}>PRIVACY</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>FOREX PIP CALCULATOR</Text>
+          
+          {renderSettingItem('book-open-variant', 'Manual', () => 
+            handleOpenLink('https://example.com/manual'))}
+          {renderSettingItem('share-variant', 'Share this app', handleShareApp, false)}
+          {renderSettingItem('thumb-up', 'Rate us', handleRateApp, false)}
+        </View>
         
-        {renderSettingItem('shield-account', 'Privacy policy', () => 
-          handleOpenLink('https://example.com/privacy'))}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>CUSTOMER SERVICE</Text>
+          
+          {renderSettingItem('help-circle-outline', 'Help & Support', () => 
+            handleOpenLink('https://example.com/support'))}
+          {renderSettingItem('bug', 'Submit a bug report', handleSubmitBugReport)}
+        </View>
         
-        <Text style={styles.sectionTitle}>PROFIT AND LOSS CALCULATOR</Text>
-        
-        {renderSettingItem('book-open-variant', 'Manual', () => 
-          handleOpenLink('https://example.com/manual'))}
-        {renderSettingItem('share-variant', 'Share this app', handleShareApp, false)}
-        {renderSettingItem('thumb-up', 'Rate us', handleRateApp, false)}
-        
-        <Text style={styles.sectionTitle}>CUSTOMER SERVICE</Text>
-        
-        {renderSettingItem('help-circle-outline', 'Help & Support', () => 
-          handleOpenLink('https://example.com/support'))}
-        {renderSettingItem('bug', 'Submit a bug report', handleSubmitBugReport)}
-        
-        <Text style={styles.sectionTitle}>FOLLOW US</Text>
-        
-        {renderSettingItem('home', 'Website', () => 
-          handleOpenLink('https://example.com'))}
-        {renderSettingItem('twitter', 'X', () => 
-          handleOpenLink('https://twitter.com/example'))}
-        {renderSettingItem('facebook', 'Facebook', () => 
-          handleOpenLink('https://facebook.com/example'))}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>FOLLOW US</Text>
+          
+          {renderSettingItem('home', 'Website', () => 
+            handleOpenLink('https://example.com'))}
+          {renderSettingItem('twitter', 'X', () => 
+            handleOpenLink('https://twitter.com/example'))}
+          {renderSettingItem('facebook', 'Facebook', () => 
+            handleOpenLink('https://facebook.com/example'))}
+        </View>
         
         <TouchableOpacity 
           style={styles.resetButton} 
@@ -283,26 +299,44 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F5F7FA',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
+    paddingVertical: 12,
+    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    backgroundColor: 'white',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
+    padding: 16,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#757575',
-    marginTop: 24,
-    marginBottom: 8,
-    marginLeft: 16,
+    fontWeight: '600',
+    color: '#666',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   settingItem: {
     flexDirection: 'row',
@@ -310,7 +344,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
@@ -318,15 +351,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  settingIconContainer: {
+    backgroundColor: '#EEF3FF',
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  settingIcon: {
+    margin: 0,
+  },
   settingItemText: {
     fontSize: 16,
-    color: '#212121',
-    marginLeft: 8,
+    color: '#333',
   },
   resetButton: {
     alignItems: 'center',
     paddingVertical: 16,
-    marginTop: 24,
+    marginTop: 8,
     marginBottom: 16,
   },
   resetButtonText: {
@@ -343,7 +383,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dialogButton: {
-    color: '#2196F3',
+    color: '#5B7FFF',
     fontSize: 16,
     fontWeight: '500',
     padding: 8,

@@ -19,14 +19,14 @@ const CustomLightTheme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: '#2196F3',
-    primaryContainer: '#E3F2FD',
+    primary: '#5B7FFF',
+    primaryContainer: '#EEF3FF',
     secondary: '#4CAF50',
-    background: '#F5F5F5',
+    background: '#F5F7FA',
     surface: '#FFFFFF',
     error: '#F44336',
-    onSurface: '#212121',
-    onBackground: '#212121',
+    onSurface: '#333333',
+    onBackground: '#333333',
     onPrimary: '#FFFFFF',
   },
 };
@@ -36,15 +36,15 @@ const CustomDarkTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: '#90CAF9',
-    primaryContainer: '#0D47A1',
+    primary: '#5B7FFF',
+    primaryContainer: '#1A237E',
     secondary: '#81C784',
     background: '#121212',
     surface: '#1E1E1E',
     error: '#EF9A9A',
     onSurface: '#FFFFFF',
     onBackground: '#FFFFFF',
-    onPrimary: '#000000',
+    onPrimary: '#FFFFFF',
   },
 };
 
