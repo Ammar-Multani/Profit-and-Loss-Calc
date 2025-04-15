@@ -25,6 +25,7 @@ import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
 import { TradeCalculation } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import ResultsChart from '../components/ResultsChart';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -89,7 +90,13 @@ export default function HomeScreen() {
     const netProfitMargin = (netProfit / revenue) * 100;
     const investment = costOfGoodsSold + totalExpenses;
     const roi = (netProfit / investment) * 100;
-    const breakEvenUnits = Math.ceil(opExpenses / unitContribution);
+    
+    const unitContribution = sellPrice - buyPrice - buyExpenses - sellExpenses;
+    
+    let breakEvenUnits = 0;
+    if (unitContribution > 0) {
+      breakEvenUnits = Math.ceil(opExpenses / unitContribution);
+    }
     
     setResults({
       revenue,
@@ -312,20 +319,22 @@ export default function HomeScreen() {
             {showAdvanced && (
               <View style={styles.advancedSection}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Operating expenses</Text>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Operating expenses</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                       value={operatingExpenses}
                       onChangeText={setOperatingExpenses}
                       keyboardType="decimal-pad"
                       placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                     />
                     <View style={styles.quantityButtons}>
                       <IconButton 
                         icon="minus" 
-                        size={16} 
+                        size={16}
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                         onPress={() => {
                           const currentValue = parseFloat(operatingExpenses) || 0;
                           if (currentValue > 0) {
@@ -335,7 +344,8 @@ export default function HomeScreen() {
                       />
                       <IconButton 
                         icon="plus" 
-                        size={16} 
+                        size={16}
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                         onPress={() => {
                           const currentValue = parseFloat(operatingExpenses) || 0;
                           setOperatingExpenses((currentValue + 1).toString());
@@ -346,46 +356,57 @@ export default function HomeScreen() {
                 </View>
                 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Buying expenses per unit</Text>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Buying expenses per unit</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                       value={buyingExpensesPerUnit}
                       onChangeText={setBuyingExpensesPerUnit}
                       keyboardType="decimal-pad"
                       placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                     />
-                    <IconButton icon="dots-vertical" size={20} color="#757575" />
+                    <IconButton 
+                      icon="dots-vertical" 
+                      size={20} 
+                      iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                    />
                   </View>
                 </View>
                 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Selling expenses per unit</Text>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling expenses per unit</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                    <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                       value={sellingExpensesPerUnit}
                       onChangeText={setSellingExpensesPerUnit}
                       keyboardType="decimal-pad"
                       placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                     />
-                    <IconButton icon="dots-vertical" size={20} color="#757575" />
+                    <IconButton 
+                      icon="dots-vertical" 
+                      size={20} 
+                      iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                    />
                   </View>
                 </View>
                 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Tax rate</Text>
-                  <View style={styles.inputContainer}>
+                  <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Tax rate</Text>
+                  <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                       value={taxRate}
                       onChangeText={setTaxRate}
                       keyboardType="decimal-pad"
                       placeholder="0"
+                      placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                     />
-                    <Text style={styles.percentSymbol}>%</Text>
+                    <Text style={[styles.percentSymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>%</Text>
                   </View>
                 </View>
               </View>
@@ -555,11 +576,13 @@ export default function HomeScreen() {
                   <View style={styles.resultRow}>
                     <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of investment</Text>
                     <View style={styles.resultValueContainer}>
-                      <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.investment)}
+                      </Text>
                       <IconButton 
                         icon="content-copy" 
                         size={16} 
-                        color="#757575"
+                        iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                         onPress={() => {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         }}
@@ -571,8 +594,14 @@ export default function HomeScreen() {
                     <View style={styles.resultRow}>
                       <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Break-even units</Text>
                       <View style={styles.resultValueContainer}>
-                        <Text style={styles.resultValue}>{results.breakEvenUnits}</Text>
-                        <IconButton icon="content-copy" size={16} color="#757575" />
+                        <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                          {results.breakEvenUnits}
+                        </Text>
+                        <IconButton 
+                          icon="content-copy" 
+                          size={16} 
+                          iconColor={isDarkMode ? '#BBBBBB' : '#757575'} 
+                        />
                       </View>
                     </View>
                   )}
