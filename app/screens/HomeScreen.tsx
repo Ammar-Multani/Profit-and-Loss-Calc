@@ -6,15 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
-  Platform,
-  Image
+  Platform
 } from 'react-native';
 import { 
   Text, 
   IconButton,
   useTheme,
-  Divider,
-  Button
+  Divider
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -25,341 +23,508 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
 import { TradeCalculation } from '../types';
-import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
   const theme = useTheme();
-  const { isDarkMode, setThemeMode } = useAppTheme();
   
-  // Currency setup
-  const [accountCurrency, setAccountCurrency] = useState('USD');
-  const [currencyPair, setCurrencyPair] = useState('EUR/USD');
+  // Basic inputs
+  const [buyingPrice, setBuyingPrice] = useState('');
+  const [sellingPrice, setSellingPrice] = useState('');
+  const [units, setUnits] = useState('');
   
-  // Position size
-  const [lotType, setLotType] = useState('Standard');
-  const [lotCount, setLotCount] = useState('1');
-  const [totalUnits, setTotalUnits] = useState('100,000');
+  // Advanced inputs
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [operatingExpenses, setOperatingExpenses] = useState('0');
+  const [buyingExpensesPerUnit, setBuyingExpensesPerUnit] = useState('0');
+  const [sellingExpensesPerUnit, setSellingExpensesPerUnit] = useState('0');
+  const [taxRate, setTaxRate] = useState('0');
   
-  // Pip value
-  const [pips, setPips] = useState('10');
+  // Calculator mode
+  const [calculatorMode, setCalculatorMode] = useState('standard');
   
   // Results
-  const [pipValue, setPipValue] = useState(100);
-  const [totalValue, setTotalValue] = useState(1000);
+  const [results, setResults] = useState(null);
   
-  // Lot sizes
-  const lotSizes = {
-    Standard: { units: 100000, pipValue: 10 },
-    Mini: { units: 10000, pipValue: 1 },
-    Micro: { units: 1000, pipValue: 0.1 },
-    Nano: { units: 100, pipValue: 0.01 }
-  };
-  
-  // Calculate values when inputs change
+  // Load calculator mode on mount
   useEffect(() => {
-    calculatePipValues();
-  }, [lotType, lotCount, pips]);
+    const loadCalculatorMode = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem('calculatorMode');
+        if (savedMode) {
+          setCalculatorMode(savedMode);
+          // If mode is advanced or professional, show advanced options by default
+          if (savedMode === 'advanced' || savedMode === 'professional') {
+            setShowAdvanced(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load calculator mode:', error);
+      }
+    };
+    
+    loadCalculatorMode();
+  }, []);
   
-  const calculatePipValues = () => {
-    const count = parseFloat(lotCount) || 1;
-    const pipCount = parseFloat(pips) || 0;
-    
-    // Get base pip value for selected lot type
-    const basePipValue = lotSizes[lotType]?.pipValue || 10;
-    
-    // Calculate pip value based on lot count
-    const calculatedPipValue = basePipValue * count;
-    setPipValue(calculatedPipValue);
-    
-    // Calculate total value
-    const calculatedTotalValue = calculatedPipValue * pipCount;
-    setTotalValue(calculatedTotalValue);
-    
-    // Update total units
-    const baseUnits = lotSizes[lotType]?.units || 100000;
-    const totalCalculatedUnits = baseUnits * count;
-    setTotalUnits(totalCalculatedUnits.toLocaleString());
-  };
+  // Calculate results whenever inputs change
+  useEffect(() => {
+    if (buyingPrice && sellingPrice && units) {
+      calculateAndUpdateResults();
+    }
+  }, [buyingPrice, sellingPrice, units, operatingExpenses, 
+      buyingExpensesPerUnit, sellingExpensesPerUnit, taxRate]);
   
-  const handleLotTypeChange = () => {
-    // This would open a dialog to select lot type
-    const types = Object.keys(lotSizes);
-    const currentIndex = types.indexOf(lotType);
-    const nextIndex = (currentIndex + 1) % types.length;
-    setLotType(types[nextIndex]);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-  
-  const formatCurrency = (value) => {
-    return value.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const calculateAndUpdateResults = () => {
+    const buyPrice = parseFloat(buyingPrice) || 0;
+    const sellPrice = parseFloat(sellingPrice) || 0;
+    const quantity = parseFloat(units) || 0;
+    const opExpenses = parseFloat(operatingExpenses) || 0;
+    const buyExpenses = parseFloat(buyingExpensesPerUnit) || 0;
+    const sellExpenses = parseFloat(sellingExpensesPerUnit) || 0;
+    const tax = parseFloat(taxRate) || 0;
+    
+    // Calculate revenue
+    const revenue = sellPrice * quantity;
+    
+    // Calculate cost of goods sold
+    const costOfGoodsSold = buyPrice * quantity;
+    
+    // Calculate total expenses
+    const totalBuyingExpenses = buyExpenses * quantity;
+    const totalSellingExpenses = sellExpenses * quantity;
+    const totalExpenses = opExpenses + totalBuyingExpenses + totalSellingExpenses;
+    
+    // Calculate profit before tax
+    const profitBeforeTax = revenue - costOfGoodsSold - totalExpenses;
+    
+    // Calculate tax amount
+    const taxAmount = profitBeforeTax > 0 ? (profitBeforeTax * (tax / 100)) : 0;
+    
+    // Calculate net profit
+    const netProfit = profitBeforeTax - taxAmount;
+    
+    // Calculate net profit margin
+    const netProfitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+    
+    // Calculate return on investment
+    const investment = costOfGoodsSold;
+    const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
+    
+    // Additional metrics for professional mode
+    let additionalMetrics = {};
+    if (calculatorMode === 'professional') {
+      const grossProfit = revenue - costOfGoodsSold;
+      const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+      const breakEvenUnits = opExpenses > 0 ? 
+        opExpenses / ((sellPrice - buyPrice) - (buyExpenses + sellExpenses)) : 0;
+      
+      additionalMetrics = {
+        grossProfit,
+        grossMargin,
+        breakEvenUnits
+      };
+    }
+    
+    setResults({
+      revenue,
+      costOfGoodsSold,
+      netProfitMargin,
+      netProfit,
+      investment,
+      roi,
+      ...additionalMetrics
+    });
   };
   
   const saveToHistory = () => {
+    if (!buyingPrice || !sellingPrice || !units) return;
+    
     const calculation: TradeCalculation = {
       id: uuidv4(),
-      entryPrice: 0,
-      exitPrice: 0,
-      quantity: parseFloat(lotCount) || 1,
-      commission: 0,
+      entryPrice: parseFloat(buyingPrice),
+      exitPrice: parseFloat(sellingPrice),
+      quantity: parseFloat(units),
+      commission: parseFloat(buyingExpensesPerUnit) + parseFloat(sellingExpensesPerUnit),
       slippage: 0,
-      positionFees: 0,
-      taxRate: 0,
-      includeCommission: false,
+      positionFees: parseFloat(operatingExpenses),
+      taxRate: parseFloat(taxRate),
+      includeCommission: true,
       includeSlippage: false,
-      includePositionFees: false,
-      includeTax: false,
+      includePositionFees: true,
+      includeTax: parseFloat(taxRate) > 0,
       stopLoss: null,
       takeProfit: null,
       timestamp: Date.now(),
-      notes: `${pips} pips - ${currencyPair} - ${lotType} lot`
+      notes: ''
     };
     
     saveCalculation(calculation);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   
+  const formatCurrency = (value) => {
+    return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  };
+  
+  const formatPercentage = (value) => {
+    return `${value.toFixed(2)}%`;
+  };
+  
+  const resetCalculator = () => {
+    setBuyingPrice('');
+    setSellingPrice('');
+    setUnits('');
+    setOperatingExpenses('0');
+    setBuyingExpensesPerUnit('0');
+    setSellingExpensesPerUnit('0');
+    setTaxRate('0');
+    setResults(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <IconButton
-          icon="information-outline"
-          size={24}
-          onPress={() => navigation.navigate('History' as never)}
-        />
-        <Text style={styles.headerTitle}>Forex Pip Calculator</Text>
-        <View style={styles.headerRight}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        <View style={styles.header}>
           <IconButton
-            icon={isDarkMode ? "weather-night" : "weather-sunny"}
-            size={24}
-            onPress={() => setThemeMode(isDarkMode ? 'light' : 'dark')}
-          />
-          <IconButton
-            icon="cog"
+            icon="account-cog"
             size={24}
             onPress={() => navigation.navigate('Settings' as never)}
           />
-        </View>
-      </View>
-      
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Currency Setup Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.iconContainer}>
-              <IconButton icon="currency-usd" size={24} style={styles.cardIcon} />
-            </View>
-            <Text style={styles.cardTitle}>Currency Setup</Text>
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Account Currency</Text>
-            <TouchableOpacity 
-              style={styles.currencySelector}
-              onPress={() => {
-                // This would open a currency selection dialog
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-            >
-              <View style={styles.currencyFlag}>
-                <Text style={styles.flagText}>🇺🇸</Text>
-              </View>
-              <View style={styles.currencyInfo}>
-                <Text style={styles.currencyCode}>{accountCurrency}</Text>
-                <Text style={styles.currencyName}>US Dollar</Text>
-              </View>
-              <View style={styles.currencyActions}>
-                <Text style={styles.currencySymbol}>$</Text>
-                <IconButton icon="chevron-down" size={24} />
-              </View>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Currency Pair</Text>
-            <TouchableOpacity 
-              style={styles.currencySelector}
-              onPress={() => {
-                // This would open a currency pair selection dialog
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-            >
-              <View style={styles.currencyFlag}>
-                <Text style={styles.flagText}>🇪🇺🇺🇸</Text>
-              </View>
-              <View style={styles.currencyInfo}>
-                <Text style={styles.currencyCode}>{currencyPair}</Text>
-                <Text style={styles.currencyName}>Euro / US Dollar</Text>
-              </View>
-              <IconButton icon="chevron-down" size={24} />
-            </TouchableOpacity>
-          </View>
-        </View>
-        
-        {/* Position Size Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.iconContainer}>
-              <IconButton icon="bank" size={24} style={styles.cardIcon} />
-            </View>
-            <Text style={styles.cardTitle}>Position Size</Text>
-          </View>
-          
-          <View style={styles.inputRow}>
-            <Text style={styles.inputLabel}>Lot Type:</Text>
-            <TouchableOpacity 
-              style={styles.valueSelector}
-              onPress={handleLotTypeChange}
-            >
-              <Text style={styles.selectorValue}>{lotType}</Text>
-              <IconButton icon="chevron-down" size={20} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.inputRow}>
-            <Text style={styles.inputLabel}>Count:</Text>
-            <TextInput
-              style={styles.valueInput}
-              value={lotCount}
-              onChangeText={setLotCount}
-              keyboardType="decimal-pad"
-              textAlign="right"
+          <View style={styles.headerActions}>
+            <IconButton
+              icon="refresh"
+              size={24}
+              onPress={resetCalculator}
+            />
+            <IconButton
+              icon="content-save"
+              size={24}
+              onPress={saveToHistory}
             />
           </View>
-          
-          <View style={styles.totalUnitsRow}>
-            <Button 
-              mode="contained" 
-              icon="pencil"
-              onPress={() => {
-                // This would open a dialog to edit lot values
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={styles.editButton}
-              labelStyle={styles.editButtonLabel}
-            >
-              Edit Lot Values
-            </Button>
-            <View style={styles.totalUnitsContainer}>
-              <Text style={styles.totalUnitsLabel}>Total Units:</Text>
-              <Text style={styles.totalUnitsValue}>{totalUnits}</Text>
-            </View>
-          </View>
         </View>
         
-        {/* Pip Value Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.iconContainer}>
-              <IconButton icon="chart-line" size={24} style={styles.cardIcon} />
-            </View>
-            <Text style={styles.cardTitle}>Pip Value</Text>
-          </View>
-          
-          <View style={styles.inputRow}>
-            <Text style={styles.inputLabel}>Pips:</Text>
-            <TextInput
-              style={styles.valueInput}
-              value={pips}
-              onChangeText={setPips}
-              keyboardType="decimal-pad"
-              textAlign="right"
-            />
-          </View>
-          
-          <View style={styles.pipInfoRow}>
-            <IconButton icon="information-outline" size={16} style={styles.infoIcon} />
-            <Text style={styles.pipInfoText}>Enter the number of pips for your calculation</Text>
-          </View>
-        </View>
-        
-        {/* Results Card */}
-        <View style={styles.resultsCard}>
-          <Text style={styles.pipsLabel}>{pips} pips</Text>
-          <View style={styles.totalValueContainer}>
-            <Text style={styles.currencyPrefix}>$</Text>
-            <Text style={styles.totalValueText}>{totalValue.toFixed(2)}</Text>
-          </View>
-          <Text style={styles.currencySuffix}>{accountCurrency}</Text>
-          
-          <View style={styles.resultTabs}>
-            <TouchableOpacity style={styles.resultTab}>
-              <IconButton icon="calculator" size={16} />
-              <Text style={styles.resultTabText}>Per Pip</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.resultTab, styles.activeTab]}>
-              <IconButton icon="calculator-variant" size={16} />
-              <Text style={styles.resultTabText}>Total ({pips})</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.resultRows}>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultCurrency}>{accountCurrency}</Text>
-              <Text style={styles.resultValue}>${pipValue.toFixed(3)}</Text>
-              <Text style={styles.resultCurrency}>{accountCurrency}</Text>
-              <Text style={styles.resultValue}>${totalValue.toFixed(3)}</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultCurrency}>{accountCurrency}</Text>
-              <Text style={styles.resultValue}>${pipValue.toFixed(3)}</Text>
-              <Text style={styles.resultCurrency}>{accountCurrency}</Text>
-              <Text style={styles.resultValue}>${totalValue.toFixed(3)}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.exchangeRateContainer}>
-            <View style={styles.exchangeRateHeader}>
-              <View style={styles.exchangeRateLeft}>
-                <IconButton icon="currency-usd" size={16} style={styles.exchangeIcon} />
-                <Text style={styles.exchangeRateTitle}>Exchange Rate</Text>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Calculator</Text>
+              <View style={styles.cardActions}>
+                <IconButton icon="information" size={20} />
+                <IconButton icon="calculator-variant" size={20} />
               </View>
-              <View style={styles.liveIndicator}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
-            </View>
-            <Text style={styles.exchangeRateValue}>Same currency (USD)</Text>
-          </View>
-          
-          <View style={styles.pipValuesContainer}>
-            <View style={styles.pipValuesHeader}>
-              <IconButton icon="bank" size={16} style={styles.pipValuesIcon} />
-              <Text style={styles.pipValuesTitle}>Pip Values by Lot Size</Text>
             </View>
             
-            <View style={styles.lotSizesGrid}>
-              <View style={[styles.lotSizeItem, styles.standardLot]}>
-                <Text style={styles.lotSizeTitle}>Standard</Text>
-                <Text style={styles.lotSizeUnits}>100,000 units</Text>
-                <Text style={styles.lotSizeValue}>$10.000</Text>
-                <Text style={styles.lotSizePerPip}>per pip</Text>
-              </View>
-              
-              <View style={[styles.lotSizeItem, styles.miniLot]}>
-                <Text style={styles.lotSizeTitle}>Mini</Text>
-                <Text style={styles.lotSizeUnits}>10,000 units</Text>
-                <Text style={styles.lotSizeValue}>$1.000</Text>
-                <Text style={styles.lotSizePerPip}>per pip</Text>
-              </View>
-              
-              <View style={[styles.lotSizeItem, styles.microLot]}>
-                <Text style={styles.lotSizeTitle}>Micro</Text>
-                <Text style={styles.lotSizeUnits}>1,000 units</Text>
-                <Text style={styles.lotSizeValue}>$0.100</Text>
-                <Text style={styles.lotSizePerPip}>per pip</Text>
-              </View>
-              
-              <View style={[styles.lotSizeItem, styles.nanoLot]}>
-                <Text style={styles.lotSizeTitle}>Nano</Text>
-                <Text style={styles.lotSizeUnits}>100 units</Text>
-                <Text style={styles.lotSizeValue}>$0.010</Text>
-                <Text style={styles.lotSizePerPip}>per pip</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Buying price</Text>
+              <View style={styles.inputContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={styles.input}
+                  value={buyingPrice}
+                  onChangeText={setBuyingPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
               </View>
             </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Selling price</Text>
+              <View style={styles.inputContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={styles.input}
+                  value={sellingPrice}
+                  onChangeText={setSellingPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Expected sale units</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={units}
+                  onChangeText={setUnits}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
+                <View style={styles.quantityButtons}>
+                  <IconButton 
+                    icon="minus" 
+                    size={16} 
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      if (currentValue > 0) {
+                        setUnits((currentValue - 1).toString());
+                      }
+                    }}
+                  />
+                  <IconButton 
+                    icon="plus" 
+                    size={16} 
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      setUnits((currentValue + 1).toString());
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.advancedToggle}
+              onPress={() => setShowAdvanced(!showAdvanced)}
+            >
+              <Text style={styles.advancedToggleText}>ADVANCED</Text>
+              <IconButton 
+                icon={showAdvanced ? "chevron-up" : "chevron-down"} 
+                size={20} 
+              />
+            </TouchableOpacity>
+            
+            {showAdvanced && (
+              <View style={styles.advancedSection}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Operating expenses</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={operatingExpenses}
+                      onChangeText={setOperatingExpenses}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <View style={styles.quantityButtons}>
+                      <IconButton 
+                        icon="minus" 
+                        size={16} 
+                        onPress={() => {
+                          const currentValue = parseFloat(operatingExpenses) || 0;
+                          if (currentValue > 0) {
+                            setOperatingExpenses((currentValue - 1).toString());
+                          }
+                        }}
+                      />
+                      <IconButton 
+                        icon="plus" 
+                        size={16} 
+                        onPress={() => {
+                          const currentValue = parseFloat(operatingExpenses) || 0;
+                          setOperatingExpenses((currentValue + 1).toString());
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Buying expenses per unit</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={buyingExpensesPerUnit}
+                      onChangeText={setBuyingExpensesPerUnit}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <IconButton icon="dots-vertical" size={20} />
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Selling expenses per unit</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={sellingExpensesPerUnit}
+                      onChangeText={setSellingExpensesPerUnit}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <IconButton icon="dots-vertical" size={20} />
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Tax rate</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={taxRate}
+                      onChangeText={setTaxRate}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <Text style={styles.percentSymbol}>%</Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
-        </View>
-      </ScrollView>
+          
+          {results && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Results</Text>
+                <IconButton icon="chart-line" size={20} />
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Revenue</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={styles.resultValue}>{formatCurrency(results.revenue)}</Text>
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Cost of goods sold</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={styles.resultValue}>{formatCurrency(results.costOfGoodsSold)}</Text>
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+              
+              {calculatorMode === 'professional' && (
+                <>
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Gross profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.grossProfit)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Gross margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.grossMargin)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} />
+                    </View>
+                  </View>
+                </>
+              )}
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Net profit margin</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={[
+                    styles.resultValue, 
+                    {color: results.netProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                  ]}>
+                    {formatPercentage(results.netProfitMargin)}
+                  </Text>
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Net profit</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={[
+                    styles.resultValue, 
+                    {color: results.netProfit >= 0 ? '#4CAF50' : '#F44336'}
+                  ]}>
+                    {formatCurrency(results.netProfit)}
+                  </Text>
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+              
+              <Divider style={styles.divider} />
+              <Text style={styles.additionalMetricsLabel}>Additional metrics</Text>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Cost of investment</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Return on investment</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={[
+                    styles.resultValue, 
+                    {color: results.roi >= 0 ? '#4CAF50' : '#F44336'}
+                  ]}>
+                    {formatPercentage(results.roi)}
+                  </Text>
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
+                </View>
+              </View>
+              
+              {calculatorMode === 'professional' && results.breakEvenUnits > 0 && (
+                <View style={styles.resultRow}>
+                  <Text style={styles.resultLabel}>Break-even units</Text>
+                  <View style={styles.resultValueContainer}>
+                    <Text style={styles.resultValue}>{Math.ceil(results.breakEvenUnits)}</Text>
+                    <IconButton icon="content-copy" size={16} />
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -367,338 +532,122 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F5F5F5',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
+  headerActions: {
     flexDirection: 'row',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
   },
   card: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 12,
+    margin: 16,
     padding: 16,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  iconContainer: {
-    backgroundColor: '#EEF3FF',
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  cardIcon: {
-    margin: 0,
-  },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '500',
+    color: '#2196F3',
+  },
+  cardActions: {
+    flexDirection: 'row',
   },
   inputGroup: {
     marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#757575',
     marginBottom: 8,
   },
-  currencySelector: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 8,
-  },
-  currencyFlag: {
-    marginRight: 8,
-  },
-  flagText: {
-    fontSize: 20,
-  },
-  currencyInfo: {
-    flex: 1,
-  },
-  currencyCode: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  currencyName: {
-    fontSize: 12,
-    color: '#666',
-  },
-  currencyActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   currencySymbol: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    color: '#757575',
+    paddingRight: 8,
   },
-  inputRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  percentSymbol: {
+    fontSize: 16,
+    color: '#757575',
+    paddingLeft: 8,
   },
-  valueSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 150,
-  },
-  selectorValue: {
+  input: {
     flex: 1,
-    fontSize: 14,
-    textAlign: 'right',
-  },
-  valueInput: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    fontSize: 16,
     paddingVertical: 8,
-    minWidth: 150,
-    fontSize: 14,
+    color: '#212121',
   },
-  totalUnitsRow: {
+  quantityButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  editButton: {
-    backgroundColor: '#5B7FFF',
-    borderRadius: 8,
-  },
-  editButtonLabel: {
-    fontSize: 12,
-  },
-  totalUnitsContainer: {
-    alignItems: 'flex-end',
-  },
-  totalUnitsLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  totalUnitsValue: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  pipInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoIcon: {
-    margin: 0,
-  },
-  pipInfoText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  resultsCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  pipsLabel: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: 'white',
-    backgroundColor: '#5B7FFF',
-    paddingVertical: 8,
-  },
-  totalValueContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'baseline',
-    backgroundColor: '#5B7FFF',
-    paddingBottom: 16,
-  },
-  currencyPrefix: {
-    fontSize: 24,
-    color: 'white',
-    fontWeight: '600',
-  },
-  totalValueText: {
-    fontSize: 36,
-    color: 'white',
-    fontWeight: '700',
-  },
-  currencySuffix: {
-    fontSize: 14,
-    color: 'white',
-    textAlign: 'center',
-    backgroundColor: '#5B7FFF',
-    paddingBottom: 16,
-  },
-  resultTabs: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  resultTab: {
-    flex: 1,
+  advancedToggle: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#F5F5F5',
+    paddingVertical: 8,
   },
-  activeTab: {
-    backgroundColor: 'white',
-  },
-  resultTabText: {
+  advancedToggleText: {
     fontSize: 14,
+    fontWeight: '500',
+    color: '#757575',
   },
-  resultRows: {
-    padding: 16,
+  advancedSection: {
+    marginTop: 8,
   },
   resultRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  resultCurrency: {
-    fontSize: 12,
-    color: '#666',
-    width: 40,
+  resultLabel: {
+    fontSize: 14,
+    color: '#757575',
+  },
+  resultValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   resultValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    width: 100,
-    textAlign: 'right',
-  },
-  exchangeRateContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  exchangeRateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  exchangeRateLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  exchangeIcon: {
-    margin: 0,
-  },
-  exchangeRateTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4CAF50',
-    marginRight: 4,
-  },
-  liveText: {
-    fontSize: 10,
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-  exchangeRateValue: {
-    fontSize: 14,
-    color: '#666',
-  },
-  pipValuesContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  pipValuesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  pipValuesIcon: {
-    margin: 0,
-  },
-  pipValuesTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  lotSizesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  lotSizeItem: {
-    width: '48%',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  standardLot: {
-    backgroundColor: '#E8F0FE',
-  },
-  miniLot: {
-    backgroundColor: '#E0F2F1',
-  },
-  microLot: {
-    backgroundColor: '#FFF8E1',
-  },
-  nanoLot: {
-    backgroundColor: '#FCE4EC',
-  },
-  lotSizeTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  lotSizeUnits: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  lotSizeValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
+    color: '#212121',
   },
-  lotSizePerPip: {
-    fontSize: 12,
-    color: '#666',
+  divider: {
+    marginVertical: 16,
+  },
+  additionalMetricsLabel: {
+    fontSize: 14,
+    color: '#757575',
+    marginBottom: 8,
   },
 });

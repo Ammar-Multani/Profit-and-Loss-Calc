@@ -39,9 +39,9 @@ export default function HistoryScreen() {
         const exitPrice = item.exitPrice.toString().includes(query);
         const quantity = item.quantity.toString().includes(query);
         const date = new Date(item.timestamp).toLocaleDateString().toLowerCase().includes(query);
-        const notes = item.notes.toLowerCase().includes(query);
+        const profit = item.result.netProfitLoss.toString().includes(query);
         
-        return entryPrice || exitPrice || quantity || date || notes;
+        return entryPrice || exitPrice || quantity || date || profit;
       });
       setFilteredHistory(filtered);
     }
@@ -79,52 +79,64 @@ export default function HistoryScreen() {
     return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
   };
   
+  const formatPercentage = (value: number) => {
+    return `${value.toFixed(2)}%`;
+  };
+  
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();
   };
   
   const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
+    const isProfitable = item.result.netProfitLoss > 0;
+    
     return (
       <View style={styles.historyItem}>
         <View style={styles.historyItemHeader}>
-          <View style={styles.historyItemDate}>
-            <IconButton icon="calendar" size={16} style={styles.historyIcon} />
-            <Text style={styles.dateText}>{formatDate(item.timestamp)}</Text>
-          </View>
+          <Text style={styles.historyItemDate}>{formatDate(item.timestamp)}</Text>
           <IconButton
-            icon="delete-outline"
+            icon="delete"
             size={20}
             onPress={() => handleDeleteItem(item.id)}
           />
         </View>
         
         <View style={styles.historyItemDetails}>
-          {item.notes ? (
-            <View style={styles.notesContainer}>
-              <Text style={styles.notesText}>{item.notes}</Text>
-            </View>
-          ) : null}
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Entry Price:</Text>
+            <Text style={styles.historyItemValue}>{formatCurrency(item.entryPrice)}</Text>
+          </View>
           
-          <View style={styles.detailsGrid}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Currency Pair</Text>
-              <Text style={styles.detailValue}>EUR/USD</Text>
-            </View>
-            
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Lot Size</Text>
-              <Text style={styles.detailValue}>{item.quantity} {item.quantity === 1 ? 'lot' : 'lots'}</Text>
-            </View>
-            
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Pip Value</Text>
-              <Text style={styles.detailValue}>${(item.quantity * 10).toFixed(2)}</Text>
-            </View>
-            
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Total Value</Text>
-              <Text style={styles.detailValue}>${(item.quantity * 10 * 10).toFixed(2)}</Text>
-            </View>
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Exit Price:</Text>
+            <Text style={styles.historyItemValue}>{formatCurrency(item.exitPrice)}</Text>
+          </View>
+          
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Quantity:</Text>
+            <Text style={styles.historyItemValue}>{item.quantity}</Text>
+          </View>
+          
+          <Divider style={styles.divider} />
+          
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Net Profit/Loss:</Text>
+            <Text style={[
+              styles.historyItemValue,
+              {color: isProfitable ? '#4CAF50' : '#F44336'}
+            ]}>
+              {formatCurrency(item.result.netProfitLoss)}
+            </Text>
+          </View>
+          
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Return:</Text>
+            <Text style={[
+              styles.historyItemValue,
+              {color: isProfitable ? '#4CAF50' : '#F44336'}
+            ]}>
+              {formatPercentage(item.result.profitLossPercentage)}
+            </Text>
           </View>
         </View>
       </View>
@@ -148,7 +160,6 @@ export default function HistoryScreen() {
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchBar}
-        iconColor="#5B7FFF"
       />
       
       {filteredHistory.length > 0 ? (
@@ -160,11 +171,6 @@ export default function HistoryScreen() {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <IconButton
-            icon="history"
-            size={48}
-            color="#CCCCCC"
-          />
           <Text style={styles.emptyText}>
             {history.length > 0 
               ? 'No results found for your search.' 
@@ -179,39 +185,36 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F5F5F5',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingVertical: 12,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    backgroundColor: 'white',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   searchBar: {
     margin: 16,
-    borderRadius: 12,
     elevation: 2,
-    backgroundColor: 'white',
   },
   listContent: {
     padding: 16,
   },
   historyItem: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -219,53 +222,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    marginBottom: 8,
   },
   historyItemDate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  historyIcon: {
-    margin: 0,
-  },
-  dateText: {
     fontSize: 14,
-    color: '#666',
+    color: '#757575',
   },
   historyItemDetails: {
-    padding: 16,
+    marginTop: 8,
   },
-  notesContainer: {
-    backgroundColor: '#EEF3FF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  notesText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  detailsGrid: {
+  historyItemRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
   },
-  detailItem: {
-    width: '48%',
-    marginBottom: 16,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  detailValue: {
+  historyItemLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    color: '#757575',
+  },
+  historyItemValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#212121',
+  },
+  divider: {
+    marginVertical: 8,
   },
   emptyContainer: {
     flex: 1,
@@ -275,8 +257,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#757575',
     textAlign: 'center',
-    marginTop: 16,
   },
 });
