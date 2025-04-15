@@ -20,8 +20,8 @@ const Card: React.FC<CardProps> = ({
   animated = false,
 }) => {
   const { colors, isDarkMode, roundness, elevation: elevationValues } = useTheme();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.95)).current;
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
     if (animated) {

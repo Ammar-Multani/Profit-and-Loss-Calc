@@ -16,16 +16,16 @@ interface CircularProgressDisplayProps {
 const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data }) => {
   const { colors, isDarkMode, spacing, roundness } = useTheme();
   
-  // Animation values
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
-  const translateXAnim1 = React.useRef(new Animated.Value(-20)).current;
-  const translateXAnim2 = React.useRef(new Animated.Value(-20)).current;
-  const translateXAnim3 = React.useRef(new Animated.Value(-20)).current;
-  const translateXAnim4 = React.useRef(new Animated.Value(-20)).current;
+  // Initialize animation values with 1 instead of 0 to make content visible immediately
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const translateXAnim1 = React.useRef(new Animated.Value(0)).current;
+  const translateXAnim2 = React.useRef(new Animated.Value(0)).current;
+  const translateXAnim3 = React.useRef(new Animated.Value(0)).current;
+  const translateXAnim4 = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animate the chart
+    // Start from visible and animate to visible (no change)
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -39,7 +39,7 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({ data 
       }),
     ]).start();
 
-    // Animate the legend items with staggered delays
+    // Start from visible and animate to visible (no change)
     Animated.stagger(100, [
       Animated.timing(translateXAnim1, {
         toValue: 0,
