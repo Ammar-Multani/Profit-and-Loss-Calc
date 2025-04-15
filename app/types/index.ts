@@ -32,3 +32,10 @@ export interface CalculationResult {
 export interface HistoryItem extends TradeCalculation {
   result: CalculationResult;
 }
+
+export interface ChartData {
+  revenue: number;
+  costOfGoodsSold: number;
+  totalExpenses: number;
+  netProfit: number;
+}

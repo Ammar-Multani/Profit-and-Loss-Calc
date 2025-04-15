@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Share } from 'react-native';
-import { Text, IconButton, useTheme, Dialog, Portal, RadioButton } from 'react-native-paper';
+import { Text, IconButton, Dialog, Portal, RadioButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { resetSettings, clearCalculationHistory, getSettings, saveSettings } from '../utils/storage';
-import { useTheme as useAppTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
-  const theme = useTheme();
-  const { themeMode, setThemeMode } = useAppTheme();
+  const { colors, themeMode, setThemeMode } = useTheme();
   const navigation = useNavigation();
   
   const [appearanceDialogVisible, setAppearanceDialogVisible] = useState(false);
@@ -152,29 +151,37 @@ export default function SettingsScreen() {
   };
   
   const renderSettingItem = (icon, title, onPress, showChevron = true) => (
-    <TouchableOpacity style={styles.settingItem} onPress={onPress}>
+    <TouchableOpacity 
+      style={[styles.settingItem, { borderBottomColor: colors.borderLight }]} 
+      onPress={onPress}
+    >
       <View style={styles.settingItemLeft}>
-        <IconButton icon={icon} size={24} color="#757575" />
-        <Text style={styles.settingItemText}>{title}</Text>
+        <IconButton icon={icon} size={24} iconColor={colors.icon} />
+        <Text style={[styles.settingItemText, { color: colors.text }]}>{title}</Text>
       </View>
-      {showChevron && <IconButton icon="chevron-right" size={24} color="#BDBDBD" />}
+      {showChevron && <IconButton icon="chevron-right" size={24} iconColor={colors.placeholder} />}
     </TouchableOpacity>
   );
   
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { 
+        backgroundColor: colors.surface, 
+        borderBottomColor: colors.border 
+      }]}>
         <IconButton
           icon="close"
           size={24}
+          iconColor={colors.icon}
           onPress={() => navigation.goBack()}
         />
-        <Text style={styles.headerTitle}>APPLICATION SETTINGS</Text>
+        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>APPLICATION SETTINGS</Text>
         <View style={{ width: 40 }} />
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>APPEARANCE & LANGUAGE</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
           {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
           {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
@@ -223,28 +230,44 @@ export default function SettingsScreen() {
           style={styles.resetButton} 
           onPress={handleClearHistory}
         >
-          <Text style={styles.resetButtonText}>Erase all content and settings</Text>
+          <Text style={[styles.resetButtonText, { color: colors.error }]}>Erase all content and settings</Text>
         </TouchableOpacity>
         
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Copyright 2025 Tyrcord, Inc. All rights reserved.</Text>
-          <Text style={styles.footerText}>Version 3.22.5 (317009)</Text>
+          <Text style={[styles.footerText, { color: colors.placeholder }]}>Copyright 2025 Tyrcord, Inc. All rights reserved.</Text>
+          <Text style={[styles.footerText, { color: colors.placeholder }]}>Version 3.22.5 (317009)</Text>
         </View>
       </ScrollView>
       
       <Portal>
-        <Dialog visible={appearanceDialogVisible} onDismiss={() => setAppearanceDialogVisible(false)}>
-          <Dialog.Title>Appearance</Dialog.Title>
+        <Dialog 
+          visible={appearanceDialogVisible} 
+          onDismiss={() => setAppearanceDialogVisible(false)}
+          style={{ backgroundColor: colors.surface }}
+        >
+          <Dialog.Title style={{ color: colors.text }}>Appearance</Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group onValueChange={handleThemeChange} value={themeMode}>
-              <RadioButton.Item label="Light" value="light" />
-              <RadioButton.Item label="Dark" value="dark" />
-              <RadioButton.Item label="System" value="system" />
+              <RadioButton.Item 
+                label="Light" 
+                value="light" 
+                labelStyle={{ color: colors.text }}
+              />
+              <RadioButton.Item 
+                label="Dark" 
+                value="dark" 
+                labelStyle={{ color: colors.text }}
+              />
+              <RadioButton.Item 
+                label="System" 
+                value="system" 
+                labelStyle={{ color: colors.text }}
+              />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
             <TouchableOpacity onPress={() => setAppearanceDialogVisible(false)}>
-              <Text style={styles.dialogButton}>Cancel</Text>
+              <Text style={[styles.dialogButton, { color: colors.primary }]}>Cancel</Text>
             </TouchableOpacity>
           </Dialog.Actions>
         </Dialog>
@@ -294,7 +317,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   header: {
     flexDirection: 'row',

@@ -10,6 +10,23 @@ interface ThemeContextType {
   isDarkMode: boolean;
   setThemeMode: (mode: ThemeMode) => void;
   theme: typeof MD3LightTheme;
+  colors: {
+    background: string;
+    surface: string;
+    surfaceVariant: string;
+    primary: string;
+    secondary: string;
+    error: string;
+    success: string;
+    warning: string;
+    text: string;
+    textSecondary: string;
+    border: string;
+    borderLight: string;
+    card: string;
+    icon: string;
+    placeholder: string;
+  };
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -28,6 +45,8 @@ const CustomLightTheme = {
     onSurface: '#212121',
     onBackground: '#212121',
     onPrimary: '#FFFFFF',
+    success: '#4CAF50',
+    warning: '#FFC107',
   },
 };
 
@@ -45,6 +64,8 @@ const CustomDarkTheme = {
     onSurface: '#FFFFFF',
     onBackground: '#FFFFFF',
     onPrimary: '#000000',
+    success: '#81C784',
+    warning: '#FFD54F',
   },
 };
 
@@ -81,6 +102,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark');
 
   const theme = isDarkMode ? CustomDarkTheme : CustomLightTheme;
+  
+  // Extended colors for easier access in components
+  const colors = {
+    background: theme.colors.background,
+    surface: theme.colors.surface,
+    surfaceVariant: isDarkMode ? '#2C2C2C' : '#F0F0F0',
+    primary: theme.colors.primary,
+    secondary: theme.colors.secondary,
+    error: theme.colors.error,
+    success: theme.colors.success,
+    warning: theme.colors.warning,
+    text: isDarkMode ? '#FFFFFF' : '#212121',
+    textSecondary: isDarkMode ? '#BBBBBB' : '#757575',
+    border: isDarkMode ? '#444444' : '#E0E0E0',
+    borderLight: isDarkMode ? '#333333' : '#F0F0F0',
+    card: theme.colors.surface,
+    icon: isDarkMode ? '#BBBBBB' : '#757575',
+    placeholder: isDarkMode ? '#777777' : '#9E9E9E',
+  };
 
   return (
     <ThemeContext.Provider
@@ -89,6 +129,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isDarkMode,
         setThemeMode: updateThemeMode,
         theme,
+        colors,
       }}
     >
       {children}

@@ -21,44 +21,36 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DonutChart } from 'react-native-gifted-charts';
 import LinearGradient from 'react-native-linear-gradient';
-
+import ResultsChart from '../components/ResultsChart';
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
-import { TradeCalculation } from '../types';
+import { TradeCalculation, ChartData } from '../types';
+import { useTheme as useThemeContext } from '../context/ThemeContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const theme = useTheme();
+  const { colors, isDarkMode } = useTheme();
   
-  // Basic inputs
   const [buyingPrice, setBuyingPrice] = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
   const [units, setUnits] = useState('');
   
-  // Advanced inputs
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [operatingExpenses, setOperatingExpenses] = useState('0');
   const [buyingExpensesPerUnit, setBuyingExpensesPerUnit] = useState('0');
   const [sellingExpensesPerUnit, setSellingExpensesPerUnit] = useState('0');
   const [taxRate, setTaxRate] = useState('0');
   
-  // Calculator mode
   const [calculatorMode, setCalculatorMode] = useState('standard');
-  
-  // Results
   const [results, setResults] = useState(null);
-  
-  // Chart view
   const [showChart, setShowChart] = useState(false);
   
-  // Load calculator mode on mount
   useEffect(() => {
     const loadCalculatorMode = async () => {
       try {
         const savedMode = await AsyncStorage.getItem('calculatorMode');
         if (savedMode) {
           setCalculatorMode(savedMode);
-          // If mode is advanced or professional, show advanced options by default
           if (savedMode === 'advanced' || savedMode === 'professional') {
             setShowAdvanced(true);
           }
@@ -71,7 +63,6 @@ export default function HomeScreen() {
     loadCalculatorMode();
   }, []);
   
-  // Calculate results whenever inputs change
   useEffect(() => {
     if (buyingPrice && sellingPrice && units) {
       calculateAndUpdateResults();
@@ -88,41 +79,17 @@ export default function HomeScreen() {
     const sellExpenses = parseFloat(sellingExpensesPerUnit) || 0;
     const tax = parseFloat(taxRate) || 0;
     
-    // Calculate revenue
     const revenue = sellPrice * quantity;
-    
-    // Calculate cost of goods sold (including buying expenses per unit)
     const costOfGoodsSold = (buyPrice * quantity) + (buyExpenses * quantity);
-    
-    // Calculate gross profit
     const grossProfit = revenue - costOfGoodsSold;
-    
-    // Calculate gross profit margin
     const grossProfitMargin = (grossProfit / revenue) * 100;
-    
-    // Calculate selling and operating expenses (operating expenses + selling expenses per unit)
     const totalExpenses = opExpenses + (sellExpenses * quantity);
-    
-    // Calculate operating profit
     const operatingProfit = grossProfit - totalExpenses;
-    
-    // Calculate tax amount (on operating profit)
     const taxAmount = (operatingProfit * tax) / 100;
-    
-    // Calculate net profit
     const netProfit = operatingProfit - taxAmount;
-    
-    // Calculate net profit margin
     const netProfitMargin = (netProfit / revenue) * 100;
-    
-    // Calculate cost of investment (COGS + total expenses)
     const investment = costOfGoodsSold + totalExpenses;
-    
-    // Calculate return on investment
     const roi = (netProfit / investment) * 100;
-    
-    // Calculate break-even units
-    const unitContribution = sellPrice - buyPrice - buyExpenses - sellExpenses;
     const breakEvenUnits = Math.ceil(opExpenses / unitContribution);
     
     setResults({
@@ -221,119 +188,96 @@ export default function HomeScreen() {
     ];
   };
   
-  const renderSimpleDonutChart = () => {
+  const renderResultsChart = () => {
     if (!results) return null;
     
-    const chartData = getDonutChartData();
-    const total = chartData.reduce((sum, item) => sum + item.value, 0);
+    const chartData = {
+      revenue: results.revenue,
+      costOfGoodsSold: results.costOfGoodsSold,
+      totalExpenses: results.totalExpenses,
+      netProfit: results.netProfit
+    };
     
-    return (
-      <View style={styles.simpleChartContainer}>
-        <Text style={styles.chartTitle}>Breakdown</Text>
-        
-        <View style={styles.simpleDonut}>
-          {chartData.map((item, index) => {
-            const percentage = (item.value / total) * 100;
-            return (
-              <View 
-                key={index}
-                style={[
-                  styles.donutSegment,
-                  { 
-                    backgroundColor: item.color,
-                    width: `${percentage}%`
-                  }
-                ]}
-              />
-            );
-          })}
-        </View>
-        
-        <View style={styles.legendContainer}>
-          {chartData.map((item, index) => (
-            <View key={index} style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-              <Text style={styles.legendText}>
-                {item.name} ({((item.value / total) * 100).toFixed(2)}%)
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
+    return <ResultsChart data={chartData} />;
   };
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#F5F5F5' }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5' }]}>
           <IconButton
             icon="account-outline"
             size={24}
+            iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'}
             onPress={() => navigation.navigate('Settings' as never)}
           />
           <IconButton
             icon="file-pdf-box"
             size={24}
+            iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'}
             onPress={saveToHistory}
           />
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.mainCard}>
+          <View style={[styles.mainCard, { backgroundColor: isDarkMode ? '#1E1E1E' : 'white' }]}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Calculator</Text>
+              <Text style={[styles.cardTitle, { color: isDarkMode ? '#90CAF9' : '#2196F3' }]}>Calculator</Text>
               <View style={styles.cardActions}>
-                <IconButton icon="information-outline" size={20} color="#2196F3" />
-                <IconButton icon="calculator-variant" size={20} color="#2196F3" />
+                <IconButton icon="information-outline" size={20} iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'} />
+                <IconButton icon="calculator-variant" size={20} iconColor={isDarkMode ? '#BBBBBB' : '#2196F3'} />
               </View>
             </View>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Buying price</Text>
-              <View style={styles.inputContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Buying price</Text>
+              <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                   value={buyingPrice}
                   onChangeText={setBuyingPrice}
                   keyboardType="decimal-pad"
                   placeholder="0"
+                  placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                 />
               </View>
             </View>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Selling price</Text>
-              <View style={styles.inputContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling price</Text>
+              <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
+                <Text style={[styles.currencySymbol, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>$</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                   value={sellingPrice}
                   onChangeText={setSellingPrice}
                   keyboardType="decimal-pad"
                   placeholder="0"
+                  placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                 />
               </View>
             </View>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Expected sale units</Text>
-              <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Expected sale units</Text>
+              <View style={[styles.inputContainer, { borderBottomColor: isDarkMode ? '#333333' : '#E0E0E0' }]}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}
                   value={units}
                   onChangeText={setUnits}
                   keyboardType="decimal-pad"
                   placeholder="0"
+                  placeholderTextColor={isDarkMode ? '#555555' : '#AAAAAA'}
                 />
                 <View style={styles.quantityButtons}>
                   <IconButton 
                     icon="minus" 
-                    size={16} 
+                    size={16}
+                    iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                     onPress={() => {
                       const currentValue = parseInt(units) || 0;
                       if (currentValue > 0) {
@@ -343,7 +287,8 @@ export default function HomeScreen() {
                   />
                   <IconButton 
                     icon="plus" 
-                    size={16} 
+                    size={16}
+                    iconColor={isDarkMode ? '#BBBBBB' : '#757575'}
                     onPress={() => {
                       const currentValue = parseInt(units) || 0;
                       setUnits((currentValue + 1).toString());
@@ -357,11 +302,11 @@ export default function HomeScreen() {
               style={styles.advancedToggle}
               onPress={() => setShowAdvanced(!showAdvanced)}
             >
-              <Text style={styles.advancedToggleText}>ADVANCED</Text>
+              <Text style={[styles.advancedToggleText, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>ADVANCED</Text>
               <IconButton 
                 icon={showAdvanced ? "chevron-up" : "chevron-down"} 
                 size={20} 
-                color="#757575"
+                color={isDarkMode ? '#BBBBBB' : '#757575'}
               />
             </TouchableOpacity>
             
@@ -449,25 +394,27 @@ export default function HomeScreen() {
           </View>
           
           {results && (
-            <View style={styles.mainCard}>
+            <View style={[styles.mainCard, { backgroundColor: isDarkMode ? '#1E1E1E' : 'white' }]}>
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Results</Text>
+                <Text style={[styles.cardTitle, { color: isDarkMode ? '#90CAF9' : '#2196F3' }]}>Results</Text>
                 <IconButton 
                   icon="chart-donut" 
                   size={20} 
-                  color="#2196F3" 
+                  color={isDarkMode ? '#90CAF9' : '#2196F3'} 
                   onPress={() => setShowChart(!showChart)}
                 />
               </View>
               
               {showChart ? (
-                renderSimpleDonutChart()
+                renderResultsChart()
               ) : (
                 <>
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Revenue</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Revenue</Text>
                     <View style={styles.resultValueContainer}>
-                      <Text style={styles.resultValue}>{formatCurrency(results.revenue)}</Text>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.revenue)}
+                      </Text>
                       <IconButton 
                         icon="content-copy" 
                         size={16} 
@@ -480,9 +427,11 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Cost of goods sold</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of goods sold</Text>
                     <View style={styles.resultValueContainer}>
-                      <Text style={styles.resultValue}>{formatCurrency(results.costOfGoodsSold)}</Text>
+                      <Text style={[styles.resultValue, { color: isDarkMode ? '#FFFFFF' : '#212121' }]}>
+                        {formatCurrency(results.costOfGoodsSold)}
+                      </Text>
                       <IconButton 
                         icon="content-copy" 
                         size={16} 
@@ -495,7 +444,7 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Gross profit</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Gross profit</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={[
                         styles.resultValue, 
@@ -508,7 +457,7 @@ export default function HomeScreen() {
                   </View>
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Gross profit margin</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Gross profit margin</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={[
                         styles.resultValue, 
@@ -523,7 +472,7 @@ export default function HomeScreen() {
                   {showAdvanced && (
                     <>
                       <View style={styles.resultRow}>
-                        <Text style={styles.resultLabel}>Selling and operating expenses</Text>
+                        <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Selling and operating expenses</Text>
                         <View style={styles.resultValueContainer}>
                           <Text style={[styles.resultValue, {color: '#F44336'}]}>
                             {formatCurrency(results.totalExpenses)}
@@ -533,7 +482,7 @@ export default function HomeScreen() {
                       </View>
                       
                       <View style={styles.resultRow}>
-                        <Text style={styles.resultLabel}>Operating profit</Text>
+                        <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Operating profit</Text>
                         <View style={styles.resultValueContainer}>
                           <Text style={[
                             styles.resultValue, 
@@ -548,7 +497,7 @@ export default function HomeScreen() {
                   )}
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Net profit margin</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Net profit margin</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={[
                         styles.resultValue, 
@@ -569,7 +518,7 @@ export default function HomeScreen() {
                   
                   {showAdvanced && parseFloat(taxRate) > 0 && (
                     <View style={styles.resultRow}>
-                      <Text style={styles.resultLabel}>Tax amount</Text>
+                      <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Tax amount</Text>
                       <View style={styles.resultValueContainer}>
                         <Text style={[styles.resultValue, {color: '#F44336'}]}>
                           {formatCurrency(results.taxAmount)}
@@ -580,7 +529,7 @@ export default function HomeScreen() {
                   )}
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Net profit</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Net profit</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={[
                         styles.resultValue, 
@@ -599,11 +548,13 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   
-                  <Divider style={styles.divider} />
-                  <Text style={styles.additionalMetricsLabel}>Additional metrics</Text>
+                  <Divider style={[styles.divider, { backgroundColor: isDarkMode ? '#333333' : '#F0F0F0' }]} />
+                  <Text style={[styles.additionalMetricsLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>
+                    Additional metrics
+                  </Text>
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Cost of investment</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Cost of investment</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
                       <IconButton 
@@ -619,7 +570,7 @@ export default function HomeScreen() {
                   
                   {results.breakEvenUnits > 0 && (
                     <View style={styles.resultRow}>
-                      <Text style={styles.resultLabel}>Break-even units</Text>
+                      <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Break-even units</Text>
                       <View style={styles.resultValueContainer}>
                         <Text style={styles.resultValue}>{results.breakEvenUnits}</Text>
                         <IconButton icon="content-copy" size={16} color="#757575" />
@@ -628,7 +579,7 @@ export default function HomeScreen() {
                   )}
                   
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Return on investment</Text>
+                    <Text style={[styles.resultLabel, { color: isDarkMode ? '#BBBBBB' : '#757575' }]}>Return on investment</Text>
                     <View style={styles.resultValueContainer}>
                       <Text style={[
                         styles.resultValue, 
@@ -659,7 +610,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   keyboardAvoidingView: {
     flex: 1,
