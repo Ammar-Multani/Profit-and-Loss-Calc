@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { v4 as uuidv4 } from 'uuid';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
@@ -39,8 +40,31 @@ export default function HomeScreen() {
   const [sellingExpensesPerUnit, setSellingExpensesPerUnit] = useState('0');
   const [taxRate, setTaxRate] = useState('0');
   
+  // Calculator mode
+  const [calculatorMode, setCalculatorMode] = useState('standard');
+  
   // Results
   const [results, setResults] = useState(null);
+  
+  // Load calculator mode on mount
+  useEffect(() => {
+    const loadCalculatorMode = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem('calculatorMode');
+        if (savedMode) {
+          setCalculatorMode(savedMode);
+          // If mode is advanced or professional, show advanced options by default
+          if (savedMode === 'advanced' || savedMode === 'professional') {
+            setShowAdvanced(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load calculator mode:', error);
+      }
+    };
+    
+    loadCalculatorMode();
+  }, []);
   
   // Calculate results whenever inputs change
   useEffect(() => {
@@ -80,11 +104,26 @@ export default function HomeScreen() {
     const netProfit = profitBeforeTax - taxAmount;
     
     // Calculate net profit margin
-    const netProfitMargin = (netProfit / revenue) * 100;
+    const netProfitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
     
     // Calculate return on investment
     const investment = costOfGoodsSold;
-    const roi = (netProfit / investment) * 100;
+    const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
+    
+    // Additional metrics for professional mode
+    let additionalMetrics = {};
+    if (calculatorMode === 'professional') {
+      const grossProfit = revenue - costOfGoodsSold;
+      const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+      const breakEvenUnits = opExpenses > 0 ? 
+        opExpenses / ((sellPrice - buyPrice) - (buyExpenses + sellExpenses)) : 0;
+      
+      additionalMetrics = {
+        grossProfit,
+        grossMargin,
+        breakEvenUnits
+      };
+    }
     
     setResults({
       revenue,
@@ -92,7 +131,8 @@ export default function HomeScreen() {
       netProfitMargin,
       netProfit,
       investment,
-      roi
+      roi,
+      ...additionalMetrics
     });
   };
   
@@ -130,6 +170,18 @@ export default function HomeScreen() {
     return `${value.toFixed(2)}%`;
   };
   
+  const resetCalculator = () => {
+    setBuyingPrice('');
+    setSellingPrice('');
+    setUnits('');
+    setOperatingExpenses('0');
+    setBuyingExpensesPerUnit('0');
+    setSellingExpensesPerUnit('0');
+    setTaxRate('0');
+    setResults(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -142,11 +194,18 @@ export default function HomeScreen() {
             size={24}
             onPress={() => navigation.navigate('Settings' as never)}
           />
-          <IconButton
-            icon="file-pdf-box"
-            size={24}
-            onPress={saveToHistory}
-          />
+          <View style={styles.headerActions}>
+            <IconButton
+              icon="refresh"
+              size={24}
+              onPress={resetCalculator}
+            />
+            <IconButton
+              icon="content-save"
+              size={24}
+              onPress={saveToHistory}
+            />
+          </View>
         </View>
         
         <ScrollView style={styles.scrollView}>
@@ -198,7 +257,24 @@ export default function HomeScreen() {
                   placeholder="0"
                 />
                 <View style={styles.quantityButtons}>
-                  <IconButton icon="calculator" size={16} />
+                  <IconButton 
+                    icon="minus" 
+                    size={16} 
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      if (currentValue > 0) {
+                        setUnits((currentValue - 1).toString());
+                      }
+                    }}
+                  />
+                  <IconButton 
+                    icon="plus" 
+                    size={16} 
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      setUnits((currentValue + 1).toString());
+                    }}
+                  />
                 </View>
               </View>
             </View>
@@ -228,7 +304,24 @@ export default function HomeScreen() {
                       placeholder="0"
                     />
                     <View style={styles.quantityButtons}>
-                      <IconButton icon="calculator" size={16} />
+                      <IconButton 
+                        icon="minus" 
+                        size={16} 
+                        onPress={() => {
+                          const currentValue = parseFloat(operatingExpenses) || 0;
+                          if (currentValue > 0) {
+                            setOperatingExpenses((currentValue - 1).toString());
+                          }
+                        }}
+                      />
+                      <IconButton 
+                        icon="plus" 
+                        size={16} 
+                        onPress={() => {
+                          const currentValue = parseFloat(operatingExpenses) || 0;
+                          setOperatingExpenses((currentValue + 1).toString());
+                        }}
+                      />
                     </View>
                   </View>
                 </View>
@@ -291,7 +384,13 @@ export default function HomeScreen() {
                 <Text style={styles.resultLabel}>Revenue</Text>
                 <View style={styles.resultValueContainer}>
                   <Text style={styles.resultValue}>{formatCurrency(results.revenue)}</Text>
-                  <IconButton icon="content-copy" size={16} />
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
                 </View>
               </View>
               
@@ -299,9 +398,45 @@ export default function HomeScreen() {
                 <Text style={styles.resultLabel}>Cost of goods sold</Text>
                 <View style={styles.resultValueContainer}>
                   <Text style={styles.resultValue}>{formatCurrency(results.costOfGoodsSold)}</Text>
-                  <IconButton icon="content-copy" size={16} />
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
                 </View>
               </View>
+              
+              {calculatorMode === 'professional' && (
+                <>
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Gross profit</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossProfit >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatCurrency(results.grossProfit)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.resultRow}>
+                    <Text style={styles.resultLabel}>Gross margin</Text>
+                    <View style={styles.resultValueContainer}>
+                      <Text style={[
+                        styles.resultValue, 
+                        {color: results.grossMargin >= 0 ? '#4CAF50' : '#F44336'}
+                      ]}>
+                        {formatPercentage(results.grossMargin)}
+                      </Text>
+                      <IconButton icon="content-copy" size={16} />
+                    </View>
+                  </View>
+                </>
+              )}
               
               <View style={styles.resultRow}>
                 <Text style={styles.resultLabel}>Net profit margin</Text>
@@ -312,7 +447,13 @@ export default function HomeScreen() {
                   ]}>
                     {formatPercentage(results.netProfitMargin)}
                   </Text>
-                  <IconButton icon="content-copy" size={16} />
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
                 </View>
               </View>
               
@@ -325,7 +466,13 @@ export default function HomeScreen() {
                   ]}>
                     {formatCurrency(results.netProfit)}
                   </Text>
-                  <IconButton icon="content-copy" size={16} />
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
                 </View>
               </View>
               
@@ -336,7 +483,13 @@ export default function HomeScreen() {
                 <Text style={styles.resultLabel}>Cost of investment</Text>
                 <View style={styles.resultValueContainer}>
                   <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
-                  <IconButton icon="content-copy" size={16} />
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
                 </View>
               </View>
               
@@ -349,9 +502,25 @@ export default function HomeScreen() {
                   ]}>
                     {formatPercentage(results.roi)}
                   </Text>
-                  <IconButton icon="content-copy" size={16} />
+                  <IconButton 
+                    icon="content-copy" 
+                    size={16} 
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }}
+                  />
                 </View>
               </View>
+              
+              {calculatorMode === 'professional' && results.breakEvenUnits > 0 && (
+                <View style={styles.resultRow}>
+                  <Text style={styles.resultLabel}>Break-even units</Text>
+                  <View style={styles.resultValueContainer}>
+                    <Text style={styles.resultValue}>{Math.ceil(results.breakEvenUnits)}</Text>
+                    <IconButton icon="content-copy" size={16} />
+                  </View>
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
@@ -373,6 +542,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
   },
   scrollView: {
     flex: 1,

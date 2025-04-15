@@ -1,19 +1,77 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Text, IconButton, useTheme, Divider } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Share } from 'react-native';
+import { Text, IconButton, useTheme, Dialog, Portal, RadioButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { resetSettings, clearCalculationHistory } from '../utils/storage';
+import { resetSettings, clearCalculationHistory, getSettings, saveSettings } from '../utils/storage';
 import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const { themeMode, setThemeMode } = useAppTheme();
   const navigation = useNavigation();
+  
+  const [appearanceDialogVisible, setAppearanceDialogVisible] = useState(false);
+  const [languageDialogVisible, setLanguageDialogVisible] = useState(false);
+  const [calculatorDialogVisible, setCalculatorDialogVisible] = useState(false);
+  
+  const [language, setLanguage] = useState('english');
+  const [calculatorMode, setCalculatorMode] = useState('standard');
+  
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedLanguage = await AsyncStorage.getItem('language');
+        if (savedLanguage) setLanguage(savedLanguage);
+        
+        const savedCalculatorMode = await AsyncStorage.getItem('calculatorMode');
+        if (savedCalculatorMode) setCalculatorMode(savedCalculatorMode);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
+    
+    loadSettings();
+  }, []);
+  
+  const saveLanguage = async (value) => {
+    setLanguage(value);
+    try {
+      await AsyncStorage.setItem('language', value);
+    } catch (error) {
+      console.error('Failed to save language setting:', error);
+    }
+  };
+  
+  const saveCalculatorMode = async (value) => {
+    setCalculatorMode(value);
+    try {
+      await AsyncStorage.setItem('calculatorMode', value);
+    } catch (error) {
+      console.error('Failed to save calculator mode setting:', error);
+    }
+  };
+  
+  const handleThemeChange = (value) => {
+    setThemeMode(value);
+    setAppearanceDialogVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
+  const handleLanguageChange = (value) => {
+    saveLanguage(value);
+    setLanguageDialogVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
+  const handleCalculatorModeChange = (value) => {
+    saveCalculatorMode(value);
+    setCalculatorDialogVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
   
   const handleResetSettings = async () => {
     Alert.alert(
@@ -28,6 +86,9 @@ export default function SettingsScreen() {
           text: 'Reset',
           onPress: async () => {
             await resetSettings();
+            setThemeMode('system');
+            saveLanguage('english');
+            saveCalculatorMode('standard');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert('Settings Reset', 'All settings have been reset to default values.');
           },
@@ -59,13 +120,31 @@ export default function SettingsScreen() {
     );
   };
   
-  const handleExportData = async () => {
+  const handleShareApp = async () => {
     try {
+      await Share.share({
+        message: 'Check out this amazing Profit & Loss Calculator app!',
+        url: 'https://example.com/app',
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Export Successful', 'Your data has been exported successfully.');
     } catch (error) {
-      Alert.alert('Export Failed', 'There was an error exporting your data.');
+      Alert.alert('Error', 'Failed to share the app.');
     }
+  };
+  
+  const handleRateApp = () => {
+    Linking.openURL('https://play.google.com/store/apps/details?id=com.example.app');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
+  const handleOpenLink = (url) => {
+    Linking.openURL(url);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+  
+  const handleSubmitBugReport = () => {
+    Linking.openURL('mailto:support@example.com?subject=Bug%20Report');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   
   const renderSettingItem = (icon, title, onPress, showChevron = true) => (
@@ -91,35 +170,43 @@ export default function SettingsScreen() {
       <Text style={styles.sectionTitle}>APPLICATION SETTINGS</Text>
       
       <ScrollView style={styles.scrollView}>
-        {renderSettingItem('palette', 'Appearance', () => {})}
-        {renderSettingItem('translate', 'Language', () => {})}
-        {renderSettingItem('calculator', 'Calculator', () => {})}
+        {renderSettingItem('palette', 'Appearance', () => setAppearanceDialogVisible(true))}
+        {renderSettingItem('translate', 'Language', () => setLanguageDialogVisible(true))}
+        {renderSettingItem('calculator', 'Calculator', () => setCalculatorDialogVisible(true))}
         
         <Text style={styles.sectionTitle}>LEGAL</Text>
         
-        {renderSettingItem('file-document-outline', 'Terms of service', () => {})}
-        {renderSettingItem('alert-circle-outline', 'Disclaimer', () => {})}
+        {renderSettingItem('file-document-outline', 'Terms of service', () => 
+          handleOpenLink('https://example.com/terms'))}
+        {renderSettingItem('alert-circle-outline', 'Disclaimer', () => 
+          handleOpenLink('https://example.com/disclaimer'))}
         
         <Text style={styles.sectionTitle}>PRIVACY</Text>
         
-        {renderSettingItem('shield-account', 'Privacy policy', () => {})}
+        {renderSettingItem('shield-account', 'Privacy policy', () => 
+          handleOpenLink('https://example.com/privacy'))}
         
         <Text style={styles.sectionTitle}>PROFIT AND LOSS CALCULATOR</Text>
         
-        {renderSettingItem('book-open-variant', 'Manual', () => {})}
-        {renderSettingItem('share-variant', 'Share this app', () => {}, false)}
-        {renderSettingItem('thumb-up', 'Rate us', () => {}, false)}
+        {renderSettingItem('book-open-variant', 'Manual', () => 
+          handleOpenLink('https://example.com/manual'))}
+        {renderSettingItem('share-variant', 'Share this app', handleShareApp, false)}
+        {renderSettingItem('thumb-up', 'Rate us', handleRateApp, false)}
         
         <Text style={styles.sectionTitle}>CUSTOMER SERVICE</Text>
         
-        {renderSettingItem('help-circle-outline', 'Help & Support', () => {})}
-        {renderSettingItem('bug', 'Submit a bug report', () => {})}
+        {renderSettingItem('help-circle-outline', 'Help & Support', () => 
+          handleOpenLink('https://example.com/support'))}
+        {renderSettingItem('bug', 'Submit a bug report', handleSubmitBugReport)}
         
         <Text style={styles.sectionTitle}>FOLLOW US</Text>
         
-        {renderSettingItem('home', 'Website', () => {})}
-        {renderSettingItem('twitter', 'X', () => {})}
-        {renderSettingItem('facebook', 'Facebook', () => {})}
+        {renderSettingItem('home', 'Website', () => 
+          handleOpenLink('https://example.com'))}
+        {renderSettingItem('twitter', 'X', () => 
+          handleOpenLink('https://twitter.com/example'))}
+        {renderSettingItem('facebook', 'Facebook', () => 
+          handleOpenLink('https://facebook.com/example'))}
         
         <TouchableOpacity 
           style={styles.resetButton} 
@@ -133,6 +220,62 @@ export default function SettingsScreen() {
           <Text style={styles.footerText}>Version 3.22.5 (317009)</Text>
         </View>
       </ScrollView>
+      
+      <Portal>
+        <Dialog visible={appearanceDialogVisible} onDismiss={() => setAppearanceDialogVisible(false)}>
+          <Dialog.Title>Appearance</Dialog.Title>
+          <Dialog.Content>
+            <RadioButton.Group onValueChange={handleThemeChange} value={themeMode}>
+              <RadioButton.Item label="Light" value="light" />
+              <RadioButton.Item label="Dark" value="dark" />
+              <RadioButton.Item label="System" value="system" />
+            </RadioButton.Group>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <TouchableOpacity onPress={() => setAppearanceDialogVisible(false)}>
+              <Text style={styles.dialogButton}>Cancel</Text>
+            </TouchableOpacity>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+      
+      <Portal>
+        <Dialog visible={languageDialogVisible} onDismiss={() => setLanguageDialogVisible(false)}>
+          <Dialog.Title>Language</Dialog.Title>
+          <Dialog.Content>
+            <RadioButton.Group onValueChange={handleLanguageChange} value={language}>
+              <RadioButton.Item label="English" value="english" />
+              <RadioButton.Item label="Spanish" value="spanish" />
+              <RadioButton.Item label="French" value="french" />
+              <RadioButton.Item label="German" value="german" />
+              <RadioButton.Item label="Chinese" value="chinese" />
+            </RadioButton.Group>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <TouchableOpacity onPress={() => setLanguageDialogVisible(false)}>
+              <Text style={styles.dialogButton}>Cancel</Text>
+            </TouchableOpacity>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+      
+      <Portal>
+        <Dialog visible={calculatorDialogVisible} onDismiss={() => setCalculatorDialogVisible(false)}>
+          <Dialog.Title>Calculator Mode</Dialog.Title>
+          <Dialog.Content>
+            <RadioButton.Group onValueChange={handleCalculatorModeChange} value={calculatorMode}>
+              <RadioButton.Item label="Standard" value="standard" />
+              <RadioButton.Item label="Advanced" value="advanced" />
+              <RadioButton.Item label="Professional" value="professional" />
+            </RadioButton.Group>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <TouchableOpacity onPress={() => setCalculatorDialogVisible(false)}>
+              <Text style={styles.dialogButton}>Cancel</Text>
+            </TouchableOpacity>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </SafeAreaView>
   );
 }
@@ -198,5 +341,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9E9E9E',
     marginTop: 4,
+  },
+  dialogButton: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: '500',
+    padding: 8,
   },
 });

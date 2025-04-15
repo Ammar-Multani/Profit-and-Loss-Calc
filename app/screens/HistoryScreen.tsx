@@ -1,82 +1,59 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { 
-  Card, 
   Text, 
-  Divider, 
   IconButton, 
-  useTheme as usePaperTheme,
+  useTheme, 
   Searchbar,
-  Button,
-  ActivityIndicator,
-  Dialog,
-  Portal
+  Divider
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
-import { getCalculationHistory, deleteCalculation, clearCalculationHistory, getSettings } from '../utils/storage';
-import { formatCurrency, formatPercentage } from '../utils/calculations';
+import { getCalculationHistory, deleteCalculation } from '../utils/storage';
 import { HistoryItem } from '../types';
-import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function HistoryScreen() {
-  const paperTheme = usePaperTheme();
-  const { isDarkMode } = useAppTheme();
+  const theme = useTheme();
+  const navigation = useNavigation();
+  
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [enableHaptics, setEnableHaptics] = useState(true);
-  const [clearDialogVisible, setClearDialogVisible] = useState(false);
+  const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
   
   useFocusEffect(
-    useCallback(() => {
-      const loadHistory = async () => {
-        setLoading(true);
-        const settings = await getSettings();
-        setEnableHaptics(settings.enableHapticFeedback);
-        
-        const historyData = await getCalculationHistory();
-        setHistory(historyData);
-        setFilteredHistory(historyData);
-        setLoading(false);
-      };
-      
+    React.useCallback(() => {
       loadHistory();
+      return () => {};
     }, [])
   );
   
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (searchQuery.trim() === '') {
       setFilteredHistory(history);
-      return;
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = history.filter(item => {
+        const entryPrice = item.entryPrice.toString().includes(query);
+        const exitPrice = item.exitPrice.toString().includes(query);
+        const quantity = item.quantity.toString().includes(query);
+        const date = new Date(item.timestamp).toLocaleDateString().toLowerCase().includes(query);
+        const profit = item.result.netProfitLoss.toString().includes(query);
+        
+        return entryPrice || exitPrice || quantity || date || profit;
+      });
+      setFilteredHistory(filtered);
     }
-    
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = history.filter(item => {
-      const entryPrice = item.entryPrice.toString();
-      const exitPrice = item.exitPrice.toString();
-      const quantity = item.quantity.toString();
-      const profitLoss = item.result.netProfitLoss.toString();
-      const notes = item.notes.toLowerCase();
-      const date = new Date(item.timestamp).toLocaleDateString();
-      
-      return (
-        entryPrice.includes(query) ||
-        exitPrice.includes(query) ||
-        quantity.includes(query) ||
-        profitLoss.includes(query) ||
-        notes.includes(query) ||
-        date.includes(query)
-      );
-    });
-    
-    setFilteredHistory(filtered);
   }, [searchQuery, history]);
   
-  const handleDelete = (id: string) => {
+  const loadHistory = async () => {
+    const calculationHistory = await getCalculationHistory();
+    setHistory(calculationHistory);
+    setFilteredHistory(calculationHistory);
+  };
+  
+  const handleDeleteItem = (id: string) => {
     Alert.alert(
       'Delete Calculation',
       'Are you sure you want to delete this calculation?',
@@ -87,179 +64,120 @@ export default function HistoryScreen() {
         },
         {
           text: 'Delete',
-          style: 'destructive',
           onPress: async () => {
-            try {
-              await deleteCalculation(id);
-              
-              if (enableHaptics) {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
-              
-              const updatedHistory = history.filter(item => item.id !== id);
-              setHistory(updatedHistory);
-              setFilteredHistory(
-                searchQuery ? 
-                  updatedHistory.filter(item => 
-                    item.notes.toLowerCase().includes(searchQuery.toLowerCase())
-                  ) : 
-                  updatedHistory
-              );
-            } catch (error) {
-              console.error('Error deleting calculation:', error);
-              Alert.alert('Error', 'Failed to delete calculation');
-            }
+            await deleteCalculation(id);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            loadHistory();
           },
+          style: 'destructive',
         },
       ]
     );
   };
   
-  const handleClearAll = async () => {
-    setClearDialogVisible(false);
-    
-    try {
-      await clearCalculationHistory();
-      
-      if (enableHaptics) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      
-      setHistory([]);
-      setFilteredHistory([]);
-    } catch (error) {
-      console.error('Error clearing history:', error);
-      Alert.alert('Error', 'Failed to clear history');
-    }
+  const formatCurrency = (value: number) => {
+    return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  };
+  
+  const formatPercentage = (value: number) => {
+    return `${value.toFixed(2)}%`;
+  };
+  
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
   };
   
   const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
     const isProfitable = item.result.netProfitLoss > 0;
-    const profitLossColor = isProfitable ? paperTheme.colors.primary : paperTheme.colors.error;
-    const date = new Date(item.timestamp).toLocaleDateString();
-    const time = new Date(item.timestamp).toLocaleTimeString();
     
     return (
-      <Card style={styles.historyCard}>
-        <Card.Content>
-          <View style={styles.historyHeader}>
-            <View>
-              <Text variant="titleMedium">
-                {formatCurrency(item.entryPrice)} → {formatCurrency(item.exitPrice)}
-              </Text>
-              <Text variant="bodySmall">{date} at {time}</Text>
-            </View>
-            <IconButton
-              icon="delete"
-              size={20}
-              onPress={() => handleDelete(item.id)}
-            />
+      <View style={styles.historyItem}>
+        <View style={styles.historyItemHeader}>
+          <Text style={styles.historyItemDate}>{formatDate(item.timestamp)}</Text>
+          <IconButton
+            icon="delete"
+            size={20}
+            onPress={() => handleDeleteItem(item.id)}
+          />
+        </View>
+        
+        <View style={styles.historyItemDetails}>
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Entry Price:</Text>
+            <Text style={styles.historyItemValue}>{formatCurrency(item.entryPrice)}</Text>
+          </View>
+          
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Exit Price:</Text>
+            <Text style={styles.historyItemValue}>{formatCurrency(item.exitPrice)}</Text>
+          </View>
+          
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Quantity:</Text>
+            <Text style={styles.historyItemValue}>{item.quantity}</Text>
           </View>
           
           <Divider style={styles.divider} />
           
-          <View style={styles.historyDetails}>
-            <View style={styles.detailRow}>
-              <Text variant="bodyMedium">Quantity:</Text>
-              <Text variant="bodyMedium">{item.quantity}</Text>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Text variant="bodyMedium">P/L:</Text>
-              <Text 
-                variant="bodyMedium" 
-                style={{ color: profitLossColor, fontWeight: 'bold' }}
-              >
-                {formatCurrency(item.result.netProfitLoss)}
-              </Text>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Text variant="bodyMedium">ROI:</Text>
-              <Text 
-                variant="bodyMedium" 
-                style={{ color: profitLossColor, fontWeight: 'bold' }}
-              >
-                {formatPercentage(item.result.profitLossPercentage)}
-              </Text>
-            </View>
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Net Profit/Loss:</Text>
+            <Text style={[
+              styles.historyItemValue,
+              {color: isProfitable ? '#4CAF50' : '#F44336'}
+            ]}>
+              {formatCurrency(item.result.netProfitLoss)}
+            </Text>
           </View>
           
-          {item.notes && (
-            <>
-              <Divider style={styles.divider} />
-              <Text variant="bodySmall" style={styles.notes}>
-                {item.notes}
-              </Text>
-            </>
-          )}
-        </Card.Content>
-      </Card>
+          <View style={styles.historyItemRow}>
+            <Text style={styles.historyItemLabel}>Return:</Text>
+            <Text style={[
+              styles.historyItemValue,
+              {color: isProfitable ? '#4CAF50' : '#F44336'}
+            ]}>
+              {formatPercentage(item.result.profitLossPercentage)}
+            </Text>
+          </View>
+        </View>
+      </View>
     );
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: paperTheme.colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          onPress={() => navigation.goBack()}
+        />
+        <Text style={styles.headerTitle}>Calculation History</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      
       <Searchbar
-        placeholder="Search history..."
+        placeholder="Search history"
         onChangeText={setSearchQuery}
         value={searchQuery}
-        style={[styles.searchBar, { backgroundColor: paperTheme.colors.surface }]}
-        iconColor={paperTheme.colors.onSurface}
-        inputStyle={{ color: paperTheme.colors.onSurface }}
-        placeholderTextColor={paperTheme.colors.onSurfaceVariant}
+        style={styles.searchBar}
       />
       
-      {loading ? (
-        <View style={[styles.loadingContainer, { backgroundColor: paperTheme.colors.background }]}>
-          <ActivityIndicator size="large" color={paperTheme.colors.primary} />
-        </View>
-      ) : filteredHistory.length > 0 ? (
+      {filteredHistory.length > 0 ? (
         <FlatList
           data={filteredHistory}
           renderItem={renderHistoryItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
-          style={{ backgroundColor: paperTheme.colors.background }}
         />
       ) : (
-        <View style={[styles.emptyContainer, { backgroundColor: paperTheme.colors.background }]}>
-          <Text style={{ color: paperTheme.colors.onBackground }} variant="bodyLarge">
-            No calculations found
-          </Text>
-          <Text 
-            style={[styles.emptySubtext, { color: paperTheme.colors.onBackgroundVariant }]} 
-            variant="bodyMedium"
-          >
-            {searchQuery ? 'Try a different search term' : 'Your calculation history will appear here'}
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            {history.length > 0 
+              ? 'No results found for your search.' 
+              : 'No calculation history yet.'}
           </Text>
         </View>
       )}
-      
-      {history.length > 0 && (
-        <Button 
-          mode="contained-tonal" 
-          onPress={() => setClearDialogVisible(true)}
-          style={styles.clearButton}
-        >
-          Clear All History
-        </Button>
-      )}
-      
-      <Portal>
-        <Dialog visible={clearDialogVisible} onDismiss={() => setClearDialogVisible(false)}>
-          <Dialog.Title>Clear History</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">
-              Are you sure you want to clear all calculation history? This action cannot be undone.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setClearDialogVisible(false)}>Cancel</Button>
-            <Button onPress={handleClearAll}>Clear All</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
     </SafeAreaView>
   );
 }
@@ -267,6 +185,20 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: 'white',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '500',
   },
   searchBar: {
     margin: 16,
@@ -274,35 +206,48 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingTop: 0,
   },
-  historyCard: {
+  historyItem: {
+    backgroundColor: 'white',
+    borderRadius: 12,
     marginBottom: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
-  historyHeader: {
+  historyItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  historyItemDate: {
+    fontSize: 14,
+    color: '#757575',
+  },
+  historyItemDetails: {
+    marginTop: 8,
+  },
+  historyItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  historyItemLabel: {
+    fontSize: 14,
+    color: '#757575',
+  },
+  historyItemValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#212121',
   },
   divider: {
     marginVertical: 8,
-  },
-  historyDetails: {
-    marginVertical: 4,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 2,
-  },
-  notes: {
-    fontStyle: 'italic',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -310,12 +255,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  emptySubtext: {
-    marginTop: 8,
-    opacity: 0.7,
+  emptyText: {
+    fontSize: 16,
+    color: '#757575',
     textAlign: 'center',
-  },
-  clearButton: {
-    margin: 16,
   },
 });
