@@ -1,5 +1,3 @@
-import 'react-native-gesture-handler';
-import { registerRootComponent } from 'expo';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider, MD3LightTheme, MD3DarkTheme, adaptNavigationTheme } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
@@ -8,10 +6,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 import { useMemo } from 'react';
 
-import HomeScreen from './app/screens/HomeScreen';
-import SettingsScreen from './app/screens/SettingsScreen';
-import HistoryScreen from './app/screens/HistoryScreen';
-import { ThemeProvider } from './app/context/ThemeContext';
+import HomeScreen from './screens/HomeScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import HistoryScreen from './screens/HistoryScreen';
+import { ThemeProvider } from './context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,23 +17,7 @@ export default function App() {
   const colorScheme = useColorScheme();
   
   const theme = useMemo(() => {
-    return colorScheme === 'dark' ? {
-      ...MD3DarkTheme,
-      colors: {
-        ...MD3DarkTheme.colors,
-        primary: '#4CAF50',
-        primaryContainer: '#1B5E20',
-        secondary: '#81C784',
-      }
-    } : {
-      ...MD3LightTheme,
-      colors: {
-        ...MD3LightTheme.colors,
-        primary: '#2E7D32',
-        primaryContainer: '#C8E6C9',
-        secondary: '#388E3C',
-      }
-    };
+    return colorScheme === 'dark' ? MD3DarkTheme : MD3LightTheme;
   }, [colorScheme]);
   
   const { LightTheme, DarkTheme } = adaptNavigationTheme({
@@ -80,5 +62,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-registerRootComponent(App);
