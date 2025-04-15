@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Switch, Text, Divider, useTheme } from 'react-native-paper';
+import { Card, Switch, Text, Divider } from 'react-native-paper';
 import CalculatorInput from './CalculatorInput';
+import { useTheme } from '../context/ThemeContext';
 
 interface AdvancedOptionsProps {
   commission: string;
@@ -41,18 +42,18 @@ const AdvancedOptionsCard: React.FC<AdvancedOptionsProps> = ({
   setIncludeTax,
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const theme = useTheme();
+  const { colors } = useTheme();
   
   return (
-    <Card style={styles.card}>
+    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
       <Card.Title 
         title="Advanced Options" 
-        titleStyle={styles.cardTitle}
+        titleStyle={[styles.cardTitle, { color: colors.text }]}
         right={(props) => (
           <Text 
             {...props} 
             onPress={() => setExpanded(!expanded)}
-            style={styles.expandButton}
+            style={[styles.expandButton, { color: colors.primary }]}
           >
             {expanded ? 'Hide' : 'Show'}
           </Text>
@@ -64,10 +65,11 @@ const AdvancedOptionsCard: React.FC<AdvancedOptionsProps> = ({
         <Card.Content>
           <View style={styles.optionRow}>
             <View style={styles.switchContainer}>
-              <Text>Include Commission</Text>
+              <Text style={{ color: colors.text }}>Include Commission</Text>
               <Switch
                 value={includeCommission}
                 onValueChange={setIncludeCommission}
+                color={colors.primary}
               />
             </View>
             <CalculatorInput
@@ -80,14 +82,15 @@ const AdvancedOptionsCard: React.FC<AdvancedOptionsProps> = ({
             />
           </View>
           
-          <Divider style={styles.divider} />
+          <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           
           <View style={styles.optionRow}>
             <View style={styles.switchContainer}>
-              <Text>Include Slippage</Text>
+              <Text style={{ color: colors.text }}>Include Slippage</Text>
               <Switch
                 value={includeSlippage}
                 onValueChange={setIncludeSlippage}
+                color={colors.primary}
               />
             </View>
             <CalculatorInput
@@ -100,14 +103,15 @@ const AdvancedOptionsCard: React.FC<AdvancedOptionsProps> = ({
             />
           </View>
           
-          <Divider style={styles.divider} />
+          <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           
           <View style={styles.optionRow}>
             <View style={styles.switchContainer}>
-              <Text>Include Position Fees</Text>
+              <Text style={{ color: colors.text }}>Include Position Fees</Text>
               <Switch
                 value={includePositionFees}
                 onValueChange={setIncludePositionFees}
+                color={colors.primary}
               />
             </View>
             <CalculatorInput
@@ -120,14 +124,15 @@ const AdvancedOptionsCard: React.FC<AdvancedOptionsProps> = ({
             />
           </View>
           
-          <Divider style={styles.divider} />
+          <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
           
           <View style={styles.optionRow}>
             <View style={styles.switchContainer}>
-              <Text>Include Tax</Text>
+              <Text style={{ color: colors.text }}>Include Tax</Text>
               <Switch
                 value={includeTax}
                 onValueChange={setIncludeTax}
+                color={colors.primary}
               />
             </View>
             <CalculatorInput

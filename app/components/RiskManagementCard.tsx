@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, Divider, useTheme } from 'react-native-paper';
+import { Card, Text, Divider } from 'react-native-paper';
 import CalculatorInput from './CalculatorInput';
 import { formatCurrency } from '../utils/calculations';
+import { useTheme } from '../context/ThemeContext';
 
 interface RiskManagementCardProps {
   entryPrice: string;
@@ -24,9 +25,8 @@ const RiskManagementCard: React.FC<RiskManagementCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [accountSize, setAccountSize] = useState('10000');
   const [riskPercentage, setRiskPercentage] = useState('1');
-  const theme = useTheme();
+  const { colors } = useTheme();
   
-  // Calculate risk metrics
   const entryPriceNum = parseFloat(entryPrice) || 0;
   const stopLossNum = parseFloat(stopLoss) || 0;
   const takeProfitNum = parseFloat(takeProfit) || 0;
@@ -34,37 +34,24 @@ const RiskManagementCard: React.FC<RiskManagementCardProps> = ({
   const accountSizeNum = parseFloat(accountSize) || 0;
   const riskPercentageNum = parseFloat(riskPercentage) || 0;
   
-  // Calculate risk amount
   const riskAmount = accountSizeNum * (riskPercentageNum / 100);
-  
-  // Calculate risk per share
   const riskPerShare = stopLossNum > 0 ? Math.abs(entryPriceNum - stopLossNum) : 0;
-  
-  // Calculate suggested position size
   const suggestedPositionSize = riskPerShare > 0 ? riskAmount / riskPerShare : 0;
-  
-  // Calculate actual risk amount
   const actualRiskAmount = riskPerShare * quantityNum;
-  
-  // Calculate actual risk percentage
   const actualRiskPercentage = accountSizeNum > 0 ? (actualRiskAmount / accountSizeNum) * 100 : 0;
-  
-  // Calculate reward amount
   const rewardAmount = takeProfitNum > 0 ? Math.abs(takeProfitNum - entryPriceNum) * quantityNum : 0;
-  
-  // Calculate risk/reward ratio
   const riskRewardRatio = actualRiskAmount > 0 ? rewardAmount / actualRiskAmount : 0;
   
   return (
-    <Card style={styles.card}>
+    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
       <Card.Title 
         title="Risk Management" 
-        titleStyle={styles.cardTitle}
+        titleStyle={[styles.cardTitle, { color: colors.text }]}
         right={(props) => (
           <Text 
             {...props} 
             onPress={() => setExpanded(!expanded)}
-            style={styles.expandButton}
+            style={[styles.expandButton, { color: colors.primary }]}
           >
             {expanded ? 'Hide' : 'Show'}
           </Text>
@@ -94,7 +81,7 @@ const RiskManagementCard: React.FC<RiskManagementCardProps> = ({
         
         {expanded && (
           <>
-            <Divider style={styles.divider} />
+            <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
             
             <View style={styles.inputRow}>
               <CalculatorInput
@@ -115,29 +102,29 @@ const RiskManagementCard: React.FC<RiskManagementCardProps> = ({
               />
             </View>
             
-            <Divider style={styles.divider} />
+            <Divider style={[styles.divider, { backgroundColor: colors.borderLight }]} />
             
             <View style={styles.resultRow}>
-              <Text variant="bodyMedium">Suggested Position Size:</Text>
-              <Text variant="bodyLarge" style={styles.resultValue}>
+              <Text variant="bodyMedium" style={{ color: colors.text }}>Suggested Position Size:</Text>
+              <Text variant="bodyLarge" style={[styles.resultValue, { color: colors.text }]}>
                 {suggestedPositionSize.toFixed(2)} shares
               </Text>
             </View>
             
             <View style={styles.resultRow}>
-              <Text variant="bodyMedium">Risk Amount:</Text>
-              <Text variant="bodyLarge" style={styles.resultValue}>
+              <Text variant="bodyMedium" style={{ color: colors.text }}>Risk Amount:</Text>
+              <Text variant="bodyLarge" style={[styles.resultValue, { color: colors.text }]}>
                 {formatCurrency(actualRiskAmount)}
               </Text>
             </View>
             
             <View style={styles.resultRow}>
-              <Text variant="bodyMedium">Risk Percentage:</Text>
+              <Text variant="bodyMedium" style={{ color: colors.text }}>Risk Percentage:</Text>
               <Text 
                 variant="bodyLarge" 
                 style={[
                   styles.resultValue, 
-                  { color: actualRiskPercentage > riskPercentageNum ? theme.colors.error : theme.colors.primary }
+                  { color: actualRiskPercentage > riskPercentageNum ? colors.error : colors.success }
                 ]}
               >
                 {actualRiskPercentage.toFixed(2)}%
@@ -145,8 +132,8 @@ const RiskManagementCard: React.FC<RiskManagementCardProps> = ({
             </View>
             
             <View style={styles.resultRow}>
-              <Text variant="bodyMedium">Risk/Reward Ratio:</Text>
-              <Text variant="bodyLarge" style={styles.resultValue}>
+              <Text variant="bodyMedium" style={{ color: colors.text }}>Risk/Reward Ratio:</Text>
+              <Text variant="bodyLarge" style={[styles.resultValue, { color: colors.text }]}>
                 1:{riskRewardRatio.toFixed(2)}
               </Text>
             </View>

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { TextInput, IconButton, useTheme } from 'react-native-paper';
+import { TextInput, IconButton } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../context/ThemeContext';
 
 interface QuantitySelectorProps {
   value: string;
@@ -26,7 +27,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   step = 1,
   disabled = false,
 }) => {
-  const theme = useTheme();
+  const { colors } = useTheme();
   
   const handleIncrement = () => {
     const currentValue = parseFloat(value) || 0;
@@ -58,6 +59,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
         onPress={handleDecrement}
         disabled={disabled || parseFloat(value) <= min}
         style={styles.button}
+        iconColor={colors.text}
       />
       <TextInput
         label={label}
@@ -67,7 +69,9 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
         mode="outlined"
         error={!!error}
         disabled={disabled}
-        style={styles.input}
+        style={[styles.input, { backgroundColor: 'transparent' }]}
+        textColor={colors.text}
+        theme={{ colors: { primary: colors.primary } }}
       />
       <IconButton
         icon="plus"
@@ -75,6 +79,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
         onPress={handleIncrement}
         disabled={disabled || (max !== undefined && parseFloat(value) >= max)}
         style={styles.button}
+        iconColor={colors.text}
       />
     </View>
   );

@@ -3,7 +3,6 @@ import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-nativ
 import { 
   Text, 
   IconButton, 
-  useTheme, 
   Searchbar,
   Divider
 } from 'react-native-paper';

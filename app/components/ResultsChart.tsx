@@ -14,19 +14,7 @@ interface ResultsChartProps {
 }
 
 const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
-  const { isDarkMode, theme } = useTheme();
-  
-  // Define theme-aware colors
-  const colors = {
-    primary: isDarkMode ? '#90CAF9' : '#2196F3',
-    error: isDarkMode ? '#EF9A9A' : '#F44336',
-    warning: isDarkMode ? '#FFCC80' : '#FF9800',
-    success: isDarkMode ? '#81C784' : '#4CAF50',
-    background: isDarkMode ? '#121212' : '#F5F5F5',
-    surface: isDarkMode ? '#1E1E1E' : '#FFFFFF',
-    onSurface: isDarkMode ? '#FFFFFF' : '#212121',
-    border: isDarkMode ? '#333333' : '#E0E0E0',
-  };
+  const { colors, isDarkMode } = useTheme();
   
   const chartData = [
     {
@@ -58,7 +46,7 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
   return (
     <Card style={[styles.container, { backgroundColor: colors.surface }]}>
       <Card.Content>
-        <Text style={[styles.title, { color: colors.onSurface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>
           Financial Breakdown
         </Text>
         <BarChart
@@ -70,8 +58,8 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
           hideRules
           xAxisThickness={2}
           yAxisThickness={2}
-          yAxisTextStyle={{ color: colors.onSurface }}
-          xAxisTextStyle={{ color: colors.onSurface }}
+          yAxisTextStyle={{ color: colors.textSecondary }}
+          xAxisTextStyle={{ color: colors.textSecondary }}
           labelWidth={85}
           label
           height={200}
@@ -89,7 +77,7 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
               borderColor: colors.border,
               shadowColor: isDarkMode ? '#000000' : '#000000',
             }]}>
-              <Text style={[styles.tooltipLabel, { color: colors.onSurface }]}>
+              <Text style={[styles.tooltipLabel, { color: colors.textSecondary }]}>
                 {item.label}
               </Text>
               <Text style={[styles.tooltipValue, { color: item.frontColor }]}>
@@ -102,7 +90,7 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
           {chartData.map((item, index) => (
             <View key={index} style={styles.legendItem}>
               <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-              <Text style={[styles.legendText, { color: colors.onSurface }]}>
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>
                 {item.label}
               </Text>
             </View>

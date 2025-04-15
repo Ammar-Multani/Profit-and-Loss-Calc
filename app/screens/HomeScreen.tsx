@@ -11,7 +11,6 @@ import {
 import { 
   Text, 
   IconButton,
-  useTheme,
   Divider
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,11 +20,11 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DonutChart } from 'react-native-gifted-charts';
 import LinearGradient from 'react-native-linear-gradient';
-import ResultsChart from '../components/ResultsChart';
+
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
-import { TradeCalculation, ChartData } from '../types';
-import { useTheme as useThemeContext } from '../context/ThemeContext';
+import { TradeCalculation } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 export default function HomeScreen() {
   const navigation = useNavigation();

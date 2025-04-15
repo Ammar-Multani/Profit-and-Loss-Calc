@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, TextInput as RNTextInput } from 'react-native';
-import { TextInput, HelperText, useTheme } from 'react-native-paper';
+import { TextInput, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 interface CalculatorInputProps {
   label: string;
@@ -50,7 +51,7 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
   blurOnSubmit,
   reference
 }) => {
-  const theme = useTheme();
+  const { colors } = useTheme();
   
   return (
     <View style={[styles.container, style]}>
@@ -75,13 +76,16 @@ const CalculatorInput: React.FC<CalculatorInputProps> = ({
         left={icon ? <TextInput.Icon icon={icon} /> : undefined}
         right={suffix ? <TextInput.Affix text={suffix} /> : undefined}
         left={prefix ? <TextInput.Affix text={prefix} /> : undefined}
-        style={styles.input}
+        style={[styles.input, { backgroundColor: 'transparent' }]}
+        theme={{ colors: { primary: colors.primary } }}
+        textColor={colors.text}
+        placeholderTextColor={colors.placeholder}
       />
       {(error || info) && (
         <HelperText
           type={error ? 'error' : 'info'}
           visible={!!(error || info)}
-          style={styles.helperText}
+          style={[styles.helperText, { color: error ? colors.error : colors.textSecondary }]}
         >
           {error || info}
         </HelperText>
