@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DonutChart } from 'react-native-gifted-charts';
+import LinearGradient from 'react-native-linear-gradient';
 
 import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
@@ -220,6 +221,48 @@ export default function HomeScreen() {
     ];
   };
   
+  const renderSimpleDonutChart = () => {
+    if (!results) return null;
+    
+    const chartData = getDonutChartData();
+    const total = chartData.reduce((sum, item) => sum + item.value, 0);
+    
+    return (
+      <View style={styles.simpleChartContainer}>
+        <Text style={styles.chartTitle}>Breakdown</Text>
+        
+        <View style={styles.simpleDonut}>
+          {chartData.map((item, index) => {
+            const percentage = (item.value / total) * 100;
+            return (
+              <View 
+                key={index}
+                style={[
+                  styles.donutSegment,
+                  { 
+                    backgroundColor: item.color,
+                    width: `${percentage}%`
+                  }
+                ]}
+              />
+            );
+          })}
+        </View>
+        
+        <View style={styles.legendContainer}>
+          {chartData.map((item, index) => (
+            <View key={index} style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+              <Text style={styles.legendText}>
+                {item.name} ({((item.value / total) * 100).toFixed(2)}%)
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -418,31 +461,7 @@ export default function HomeScreen() {
               </View>
               
               {showChart ? (
-                <View style={styles.chartContainer}>
-                  <Text style={styles.chartTitle}>Breakdown</Text>
-                  <View style={styles.donutChartContainer}>
-                    <DonutChart
-                      data={getDonutChartData()}
-                      radius={80}
-                      innerRadius={40}
-                      innerCircleColor={'white'}
-                      showText
-                      textColor={'black'}
-                      textSize={12}
-                      showValuesAsLabels={false}
-                      showGradient={false}
-                    />
-                  </View>
-                  
-                  <View style={styles.legendContainer}>
-                    {getDonutChartData().map((item, index) => (
-                      <View key={index} style={styles.legendItem}>
-                        <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                        <Text style={styles.legendText}>{item.name} ({item.text})</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
+                renderSimpleDonutChart()
               ) : (
                 <>
                   <View style={styles.resultRow}>
@@ -774,6 +793,7 @@ const styles = StyleSheet.create({
   legendContainer: {
     width: '100%',
     paddingHorizontal: 16,
+    marginTop: 24,
   },
   legendItem: {
     flexDirection: 'row',
@@ -789,5 +809,20 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 14,
     color: '#757575',
+  },
+  simpleChartContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  simpleDonut: {
+    flexDirection: 'row',
+    height: 30,
+    width: '100%',
+    borderRadius: 15,
+    overflow: 'hidden',
+    marginVertical: 20,
+  },
+  donutSegment: {
+    height: '100%',
   },
 });
