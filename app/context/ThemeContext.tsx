@@ -14,6 +14,40 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Define custom light theme
+const CustomLightTheme = {
+  ...MD3LightTheme,
+  colors: {
+    ...MD3LightTheme.colors,
+    primary: '#2196F3',
+    primaryContainer: '#E3F2FD',
+    secondary: '#4CAF50',
+    background: '#F5F5F5',
+    surface: '#FFFFFF',
+    error: '#F44336',
+    onSurface: '#212121',
+    onBackground: '#212121',
+    onPrimary: '#FFFFFF',
+  },
+};
+
+// Define custom dark theme
+const CustomDarkTheme = {
+  ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    primary: '#90CAF9',
+    primaryContainer: '#0D47A1',
+    secondary: '#81C784',
+    background: '#121212',
+    surface: '#1E1E1E',
+    error: '#EF9A9A',
+    onSurface: '#FFFFFF',
+    onBackground: '#FFFFFF',
+    onPrimary: '#000000',
+  },
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
@@ -46,29 +80,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isDarkMode = 
     themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark');
 
-  const theme = isDarkMode ? {
-    ...MD3DarkTheme,
-    colors: {
-      ...MD3DarkTheme.colors,
-      primary: '#4CAF50',
-      primaryContainer: '#1B5E20',
-      secondary: '#81C784',
-      background: '#121212',
-      surface: '#1E1E1E',
-      error: '#CF6679',
-    }
-  } : {
-    ...MD3LightTheme,
-    colors: {
-      ...MD3LightTheme.colors,
-      primary: '#2E7D32',
-      primaryContainer: '#C8E6C9',
-      secondary: '#388E3C',
-      background: '#F5F5F5',
-      surface: '#FFFFFF',
-      error: '#B00020',
-    }
-  };
+  const theme = isDarkMode ? CustomDarkTheme : CustomLightTheme;
 
   return (
     <ThemeContext.Provider

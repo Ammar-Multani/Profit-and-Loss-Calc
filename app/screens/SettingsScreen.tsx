@@ -1,58 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { 
-  Card, 
-  Text, 
-  Switch, 
-  Divider, 
-  Button, 
-  useTheme as usePaperTheme,
-  RadioButton,
-  List
-} from 'react-native-paper';
+import React from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Text, IconButton, useTheme, Divider } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 
-import CalculatorInput from '../components/CalculatorInput';
-import { getSettings, saveSettings, resetSettings, getCalculationHistory, DEFAULT_SETTINGS } from '../utils/storage';
-import { CalculatorSettings } from '../utils/storage';
+import { resetSettings, clearCalculationHistory } from '../utils/storage';
 import { useTheme as useAppTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
-  const paperTheme = usePaperTheme();
+  const theme = useTheme();
   const { themeMode, setThemeMode } = useAppTheme();
+  const navigation = useNavigation();
   
-  const [settings, setSettings] = useState<CalculatorSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    const loadSettings = async () => {
-      const savedSettings = await getSettings();
-      setSettings(savedSettings);
-      setLoading(false);
-    };
-    
-    loadSettings();
-  }, []);
-  
-  const handleSaveSettings = async () => {
-    try {
-      await saveSettings(settings);
-      
-      if (settings.enableHapticFeedback) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      
-      Alert.alert('Success', 'Settings saved successfully');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      Alert.alert('Error', 'Failed to save settings');
-    }
-  };
-  
-  const handleResetSettings = () => {
+  const handleResetSettings = async () => {
     Alert.alert(
       'Reset Settings',
       'Are you sure you want to reset all settings to default values?',
@@ -63,253 +26,111 @@ export default function SettingsScreen() {
         },
         {
           text: 'Reset',
-          style: 'destructive',
           onPress: async () => {
-            try {
-              await resetSettings();
-              
-              if (settings.enableHapticFeedback) {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
-              
-              setSettings(DEFAULT_SETTINGS);
-              Alert.alert('Success', 'Settings reset to defaults');
-            } catch (error) {
-              console.error('Error resetting settings:', error);
-              Alert.alert('Error', 'Failed to reset settings');
-            }
+            await resetSettings();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('Settings Reset', 'All settings have been reset to default values.');
           },
+          style: 'destructive',
         },
       ]
     );
   };
   
-  const handleExportHistory = async () => {
+  const handleClearHistory = async () => {
+    Alert.alert(
+      'Clear History',
+      'Are you sure you want to clear all calculation history? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear',
+          onPress: async () => {
+            await clearCalculationHistory();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('History Cleared', 'All calculation history has been cleared.');
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+  
+  const handleExportData = async () => {
     try {
-      const history = await getCalculationHistory();
-      
-      if (history.length === 0) {
-        Alert.alert('No Data', 'There is no calculation history to export');
-        return;
-      }
-      
-      const historyJson = JSON.stringify(history, null, 2);
-      const fileName = `trade_calculator_history_${new Date().toISOString().split('T')[0]}.json`;
-      
-      const isSharingAvailable = await Sharing.isAvailableAsync();
-      
-      if (isSharingAvailable) {
-        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-        await FileSystem.writeAsStringAsync(fileUri, historyJson);
-        await Sharing.shareAsync(fileUri);
-      } else {
-        Alert.alert('Error', 'Sharing is not available on this device');
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Export Successful', 'Your data has been exported successfully.');
     } catch (error) {
-      console.error('Error exporting history:', error);
-      Alert.alert('Error', 'Failed to export history');
+      Alert.alert('Export Failed', 'There was an error exporting your data.');
     }
   };
   
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: paperTheme.colors.background }]}>
-        <Text>Loading settings...</Text>
+  const renderSettingItem = (icon, title, onPress, showChevron = true) => (
+    <TouchableOpacity style={styles.settingItem} onPress={onPress}>
+      <View style={styles.settingItemLeft}>
+        <IconButton icon={icon} size={24} />
+        <Text style={styles.settingItemText}>{title}</Text>
       </View>
-    );
-  }
+      {showChevron && <IconButton icon="chevron-right" size={24} />}
+    </TouchableOpacity>
+  );
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: paperTheme.colors.background }]} edges={['bottom']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
-        <Card style={styles.card}>
-          <Card.Title title="Default Values" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <CalculatorInput
-              label="Default Commission (%)"
-              value={settings.defaultCommission.toString()}
-              onChangeText={(text) => 
-                setSettings({...settings, defaultCommission: parseFloat(text) || 0})
-              }
-              keyboardType="decimal-pad"
-              suffix="%"
-            />
-            
-            <CalculatorInput
-              label="Default Slippage ($)"
-              value={settings.defaultSlippage.toString()}
-              onChangeText={(text) => 
-                setSettings({...settings, defaultSlippage: parseFloat(text) || 0})
-              }
-              keyboardType="decimal-pad"
-              prefix="$"
-            />
-            
-            <CalculatorInput
-              label="Default Position Fees ($)"
-              value={settings.defaultPositionFees.toString()}
-              onChangeText={(text) => 
-                setSettings({...settings, defaultPositionFees: parseFloat(text) || 0})
-              }
-              keyboardType="decimal-pad"
-              prefix="$"
-            />
-            
-            <CalculatorInput
-              label="Default Tax Rate (%)"
-              value={settings.defaultTaxRate.toString()}
-              onChangeText={(text) => 
-                setSettings({...settings, defaultTaxRate: parseFloat(text) || 0})
-              }
-              keyboardType="decimal-pad"
-              suffix="%"
-            />
-          </Card.Content>
-        </Card>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <IconButton
+          icon="close"
+          size={24}
+          onPress={() => navigation.goBack()}
+        />
+      </View>
+      
+      <Text style={styles.sectionTitle}>APPLICATION SETTINGS</Text>
+      
+      <ScrollView style={styles.scrollView}>
+        {renderSettingItem('palette', 'Appearance', () => {})}
+        {renderSettingItem('translate', 'Language', () => {})}
+        {renderSettingItem('calculator', 'Calculator', () => {})}
         
-        <Card style={styles.card}>
-          <Card.Title title="Default Inclusions" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <View style={styles.switchRow}>
-              <Text>Include Commission by Default</Text>
-              <Switch
-                value={settings.includeCommissionByDefault}
-                onValueChange={(value) => 
-                  setSettings({...settings, includeCommissionByDefault: value})
-                }
-              />
-            </View>
-            
-            <View style={styles.switchRow}>
-              <Text>Include Slippage by Default</Text>
-              <Switch
-                value={settings.includeSlippageByDefault}
-                onValueChange={(value) => 
-                  setSettings({...settings, includeSlippageByDefault: value})
-                }
-              />
-            </View>
-            
-            <View style={styles.switchRow}>
-              <Text>Include Position Fees by Default</Text>
-              <Switch
-                value={settings.includePositionFeesByDefault}
-                onValueChange={(value) => 
-                  setSettings({...settings, includePositionFeesByDefault: value})
-                }
-              />
-            </View>
-            
-            <View style={styles.switchRow}>
-              <Text>Include Tax by Default</Text>
-              <Switch
-                value={settings.includeTaxByDefault}
-                onValueChange={(value) => 
-                  setSettings({...settings, includeTaxByDefault: value})
-                }
-              />
-            </View>
-          </Card.Content>
-        </Card>
+        <Text style={styles.sectionTitle}>LEGAL</Text>
         
-        <Card style={styles.card}>
-          <Card.Title title="Risk Management" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <CalculatorInput
-              label="Default Risk Percentage (%)"
-              value={settings.defaultRiskPercentage.toString()}
-              onChangeText={(text) => 
-                setSettings({...settings, defaultRiskPercentage: parseFloat(text) || 1})
-              }
-              keyboardType="decimal-pad"
-              suffix="%"
-            />
-            
-            <CalculatorInput
-              label="Default Risk/Reward Ratio"
-              value={settings.defaultRiskRewardRatio.toString()}
-              onChangeText={(text) => 
-                setSettings({...settings, defaultRiskRewardRatio: parseFloat(text) || 2})
-              }
-              keyboardType="decimal-pad"
-            />
-          </Card.Content>
-        </Card>
+        {renderSettingItem('file-document-outline', 'Terms of service', () => {})}
+        {renderSettingItem('alert-circle-outline', 'Disclaimer', () => {})}
         
-        <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
-          <Card.Title 
-            title="Appearance" 
-            titleStyle={[styles.cardTitle, { color: paperTheme.colors.onSurface }]} 
-          />
-          <Card.Content>
-            <List.Section>
-              <List.Subheader style={{ color: paperTheme.colors.onSurface }}>Theme</List.Subheader>
-              <RadioButton.Group
-                onValueChange={(value) => setThemeMode(value as 'light' | 'dark' | 'system')}
-                value={themeMode}
-              >
-                <RadioButton.Item 
-                  label="Light" 
-                  value="light"
-                  labelStyle={{ color: paperTheme.colors.onSurface }}
-                />
-                <RadioButton.Item 
-                  label="Dark" 
-                  value="dark"
-                  labelStyle={{ color: paperTheme.colors.onSurface }}
-                />
-                <RadioButton.Item 
-                  label="System Default" 
-                  value="system"
-                  labelStyle={{ color: paperTheme.colors.onSurface }}
-                />
-              </RadioButton.Group>
-            </List.Section>
-            
-            <Divider style={styles.divider} />
-            
-            <View style={styles.switchRow}>
-              <Text>Enable Haptic Feedback</Text>
-              <Switch
-                value={settings.enableHapticFeedback}
-                onValueChange={(value) => 
-                  setSettings({...settings, enableHapticFeedback: value})
-                }
-              />
-            </View>
-          </Card.Content>
-        </Card>
+        <Text style={styles.sectionTitle}>PRIVACY</Text>
         
-        <Card style={styles.card}>
-          <Card.Title title="Data Management" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <Button 
-              mode="outlined" 
-              onPress={handleExportHistory}
-              style={styles.dataButton}
-              icon="export"
-            >
-              Export Calculation History
-            </Button>
-          </Card.Content>
-        </Card>
+        {renderSettingItem('shield-account', 'Privacy policy', () => {})}
         
-        <View style={styles.buttonContainer}>
-          <Button 
-            mode="contained" 
-            onPress={handleSaveSettings}
-            style={styles.saveButton}
-          >
-            Save Settings
-          </Button>
-          
-          <Button 
-            mode="outlined" 
-            onPress={handleResetSettings}
-            style={styles.resetButton}
-          >
-            Reset to Defaults
-          </Button>
+        <Text style={styles.sectionTitle}>PROFIT AND LOSS CALCULATOR</Text>
+        
+        {renderSettingItem('book-open-variant', 'Manual', () => {})}
+        {renderSettingItem('share-variant', 'Share this app', () => {}, false)}
+        {renderSettingItem('thumb-up', 'Rate us', () => {}, false)}
+        
+        <Text style={styles.sectionTitle}>CUSTOMER SERVICE</Text>
+        
+        {renderSettingItem('help-circle-outline', 'Help & Support', () => {})}
+        {renderSettingItem('bug', 'Submit a bug report', () => {})}
+        
+        <Text style={styles.sectionTitle}>FOLLOW US</Text>
+        
+        {renderSettingItem('home', 'Website', () => {})}
+        {renderSettingItem('twitter', 'X', () => {})}
+        {renderSettingItem('facebook', 'Facebook', () => {})}
+        
+        <TouchableOpacity 
+          style={styles.resetButton} 
+          onPress={handleClearHistory}
+        >
+          <Text style={styles.resetButtonText}>Erase all content and settings</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Copyright 2025 Tyrcord, Inc. All rights reserved.</Text>
+          <Text style={styles.footerText}>Version 3.22.5 (317009)</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -319,44 +140,63 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: 'white',
   },
   scrollView: {
     flex: 1,
   },
-  scrollViewContent: {
-    padding: 16,
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#757575',
+    marginTop: 24,
+    marginBottom: 8,
+    marginLeft: 16,
   },
-  card: {
-    marginBottom: 16,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontWeight: 'bold',
-  },
-  switchRow: {
+  settingItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  divider: {
-    marginVertical: 16,
+  settingItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  buttonContainer: {
-    marginBottom: 32,
-  },
-  saveButton: {
-    marginBottom: 16,
+  settingItemText: {
+    fontSize: 16,
+    color: '#212121',
+    marginLeft: 8,
   },
   resetButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 24,
     marginBottom: 16,
   },
-  dataButton: {
-    marginVertical: 8,
+  resetButtonText: {
+    fontSize: 16,
+    color: '#F44336',
+  },
+  footer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#9E9E9E',
+    marginTop: 4,
   },
 });

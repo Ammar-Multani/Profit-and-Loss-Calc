@@ -1,400 +1,360 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   StyleSheet, 
   ScrollView, 
-  KeyboardAvoidingView, 
-  Platform,
-  TextInput as RNTextInput,
-  Share
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { 
-  Appbar, 
-  Card, 
-  Button, 
+  Text, 
   IconButton,
-  FAB,
-  Snackbar,
-  useTheme as usePaperTheme
+  useTheme,
+  Divider
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { v4 as uuidv4 } from 'uuid';
+import * as Haptics from 'expo-haptics';
 
-import CalculatorInput from '../components/CalculatorInput';
-import QuantitySelector from '../components/QuantitySelector';
-import AdvancedOptionsCard from '../components/AdvancedOptionsCard';
-import ResultCard from '../components/ResultCard';
-import RiskManagementCard from '../components/RiskManagementCard';
-import { calculateResults, formatCurrency, formatPercentage } from '../utils/calculations';
+import { calculateResults } from '../utils/calculations';
 import { saveCalculation, getSettings } from '../utils/storage';
-import { TradeCalculation, CalculationResult } from '../types';
-import { useTheme as useAppTheme } from '../context/ThemeContext';
+import { TradeCalculation } from '../types';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const paperTheme = usePaperTheme();
-  const { isDarkMode } = useAppTheme();
+  const theme = useTheme();
   
-  // Input refs for keyboard navigation
-  const exitPriceRef = useRef<RNTextInput>(null);
-  const quantityRef = useRef<RNTextInput>(null);
+  // Basic inputs
+  const [buyingPrice, setBuyingPrice] = useState('');
+  const [sellingPrice, setSellingPrice] = useState('');
+  const [units, setUnits] = useState('');
   
-  // Form state
-  const [entryPrice, setEntryPrice] = useState('');
-  const [exitPrice, setExitPrice] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const [commission, setCommission] = useState('0.1');
-  const [slippage, setSlippage] = useState('0');
-  const [positionFees, setPositionFees] = useState('0');
+  // Advanced inputs
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [operatingExpenses, setOperatingExpenses] = useState('0');
+  const [buyingExpensesPerUnit, setBuyingExpensesPerUnit] = useState('0');
+  const [sellingExpensesPerUnit, setSellingExpensesPerUnit] = useState('0');
   const [taxRate, setTaxRate] = useState('0');
-  const [includeCommission, setIncludeCommission] = useState(true);
-  const [includeSlippage, setIncludeSlippage] = useState(false);
-  const [includePositionFees, setIncludePositionFees] = useState(false);
-  const [includeTax, setIncludeTax] = useState(false);
-  const [stopLoss, setStopLoss] = useState('');
-  const [takeProfit, setTakeProfit] = useState('');
-  const [notes, setNotes] = useState('');
   
-  // Validation state
-  const [entryPriceError, setEntryPriceError] = useState('');
-  const [exitPriceError, setExitPriceError] = useState('');
-  const [quantityError, setQuantityError] = useState('');
+  // Results
+  const [results, setResults] = useState(null);
   
-  // Results state
-  const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
-  const [showExpandedResults, setShowExpandedResults] = useState(false);
-  
-  // UI state
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [enableHaptics, setEnableHaptics] = useState(true);
-  
-  // Load settings
+  // Calculate results whenever inputs change
   useEffect(() => {
-    const loadSettings = async () => {
-      const settings = await getSettings();
-      setCommission(settings.defaultCommission.toString());
-      setSlippage(settings.defaultSlippage.toString());
-      setPositionFees(settings.defaultPositionFees.toString());
-      setTaxRate(settings.defaultTaxRate.toString());
-      setIncludeCommission(settings.includeCommissionByDefault);
-      setIncludeSlippage(settings.includeSlippageByDefault);
-      setIncludePositionFees(settings.includePositionFeesByDefault);
-      setIncludeTax(settings.includeTaxByDefault);
-      setEnableHaptics(settings.enableHapticFeedback);
-    };
-    
-    loadSettings();
-  }, []);
+    if (buyingPrice && sellingPrice && units) {
+      calculateAndUpdateResults();
+    }
+  }, [buyingPrice, sellingPrice, units, operatingExpenses, 
+      buyingExpensesPerUnit, sellingExpensesPerUnit, taxRate]);
   
-  // Validate inputs
-  const validateInputs = (): boolean => {
-    let isValid = true;
+  const calculateAndUpdateResults = () => {
+    const buyPrice = parseFloat(buyingPrice) || 0;
+    const sellPrice = parseFloat(sellingPrice) || 0;
+    const quantity = parseFloat(units) || 0;
+    const opExpenses = parseFloat(operatingExpenses) || 0;
+    const buyExpenses = parseFloat(buyingExpensesPerUnit) || 0;
+    const sellExpenses = parseFloat(sellingExpensesPerUnit) || 0;
+    const tax = parseFloat(taxRate) || 0;
     
-    if (!entryPrice || isNaN(parseFloat(entryPrice)) || parseFloat(entryPrice) <= 0) {
-      setEntryPriceError('Please enter a valid entry price');
-      isValid = false;
-    } else {
-      setEntryPriceError('');
-    }
+    // Calculate revenue
+    const revenue = sellPrice * quantity;
     
-    if (!exitPrice || isNaN(parseFloat(exitPrice)) || parseFloat(exitPrice) <= 0) {
-      setExitPriceError('Please enter a valid exit price');
-      isValid = false;
-    } else {
-      setExitPriceError('');
-    }
+    // Calculate cost of goods sold
+    const costOfGoodsSold = buyPrice * quantity;
     
-    if (!quantity || isNaN(parseFloat(quantity)) || parseFloat(quantity) <= 0) {
-      setQuantityError('Please enter a valid quantity');
-      isValid = false;
-    } else {
-      setQuantityError('');
-    }
+    // Calculate total expenses
+    const totalBuyingExpenses = buyExpenses * quantity;
+    const totalSellingExpenses = sellExpenses * quantity;
+    const totalExpenses = opExpenses + totalBuyingExpenses + totalSellingExpenses;
     
-    return isValid;
+    // Calculate profit before tax
+    const profitBeforeTax = revenue - costOfGoodsSold - totalExpenses;
+    
+    // Calculate tax amount
+    const taxAmount = profitBeforeTax > 0 ? (profitBeforeTax * (tax / 100)) : 0;
+    
+    // Calculate net profit
+    const netProfit = profitBeforeTax - taxAmount;
+    
+    // Calculate net profit margin
+    const netProfitMargin = (netProfit / revenue) * 100;
+    
+    // Calculate return on investment
+    const investment = costOfGoodsSold;
+    const roi = (netProfit / investment) * 100;
+    
+    setResults({
+      revenue,
+      costOfGoodsSold,
+      netProfitMargin,
+      netProfit,
+      investment,
+      roi
+    });
   };
   
-  // Calculate results
-  const calculate = () => {
-    if (!validateInputs()) {
-      if (enableHaptics) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-      return;
-    }
-    
-    if (enableHaptics) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+  const saveToHistory = () => {
+    if (!buyingPrice || !sellingPrice || !units) return;
     
     const calculation: TradeCalculation = {
       id: uuidv4(),
-      entryPrice: parseFloat(entryPrice),
-      exitPrice: parseFloat(exitPrice),
-      quantity: parseFloat(quantity),
-      commission: parseFloat(commission),
-      slippage: parseFloat(slippage),
-      positionFees: parseFloat(positionFees),
+      entryPrice: parseFloat(buyingPrice),
+      exitPrice: parseFloat(sellingPrice),
+      quantity: parseFloat(units),
+      commission: parseFloat(buyingExpensesPerUnit) + parseFloat(sellingExpensesPerUnit),
+      slippage: 0,
+      positionFees: parseFloat(operatingExpenses),
       taxRate: parseFloat(taxRate),
-      includeCommission,
-      includeSlippage,
-      includePositionFees,
-      includeTax,
-      stopLoss: stopLoss ? parseFloat(stopLoss) : null,
-      takeProfit: takeProfit ? parseFloat(takeProfit) : null,
+      includeCommission: true,
+      includeSlippage: false,
+      includePositionFees: true,
+      includeTax: parseFloat(taxRate) > 0,
+      stopLoss: null,
+      takeProfit: null,
       timestamp: Date.now(),
-      notes,
+      notes: ''
     };
     
-    const result = calculateResults(calculation);
-    setCalculationResult(result);
+    saveCalculation(calculation);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   
-  // Save calculation
-  const saveToHistory = async () => {
-    if (!calculationResult || !validateInputs()) {
-      return;
-    }
-    
-    try {
-      const calculation: TradeCalculation = {
-        id: uuidv4(),
-        entryPrice: parseFloat(entryPrice),
-        exitPrice: parseFloat(exitPrice),
-        quantity: parseFloat(quantity),
-        commission: parseFloat(commission),
-        slippage: parseFloat(slippage),
-        positionFees: parseFloat(positionFees),
-        taxRate: parseFloat(taxRate),
-        includeCommission,
-        includeSlippage,
-        includePositionFees,
-        includeTax,
-        stopLoss: stopLoss ? parseFloat(stopLoss) : null,
-        takeProfit: takeProfit ? parseFloat(takeProfit) : null,
-        timestamp: Date.now(),
-        notes,
-      };
-      
-      await saveCalculation(calculation);
-      
-      if (enableHaptics) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      
-      setSnackbarMessage('Calculation saved to history');
-      setSnackbarVisible(true);
-    } catch (error) {
-      console.error('Error saving calculation:', error);
-      setSnackbarMessage('Failed to save calculation');
-      setSnackbarVisible(true);
-    }
+  const formatCurrency = (value) => {
+    return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
   };
   
-  // Reset form
-  const resetForm = () => {
-    setEntryPrice('');
-    setExitPrice('');
-    setQuantity('1');
-    setStopLoss('');
-    setTakeProfit('');
-    setNotes('');
-    setCalculationResult(null);
-    setEntryPriceError('');
-    setExitPriceError('');
-    setQuantityError('');
-    
-    if (enableHaptics) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-  };
-  
-  // Share results
-  const shareResults = async () => {
-    if (!calculationResult) return;
-    
-    const isProfitable = calculationResult.netProfitLoss > 0;
-    const profitLossText = isProfitable ? 'Profit' : 'Loss';
-    
-    const message = `
-Trade Summary:
-Entry Price: ${formatCurrency(parseFloat(entryPrice))}
-Exit Price: ${formatCurrency(parseFloat(exitPrice))}
-Quantity: ${quantity}
-
-${profitLossText}: ${formatCurrency(calculationResult.netProfitLoss)}
-ROI: ${formatPercentage(calculationResult.profitLossPercentage)}
-Break-even Price: ${formatCurrency(calculationResult.breakEvenPrice)}
-
-Calculated with Profit & Loss Calculator
-    `;
-    
-    try {
-      await Share.share({
-        message,
-      });
-    } catch (error) {
-      console.error('Error sharing results:', error);
-    }
+  const formatPercentage = (value) => {
+    return `${value.toFixed(2)}%`;
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <Appbar.Header>
-          <Appbar.Content title="Profit & Loss Calculator" />
-          <Appbar.Action icon="history" onPress={() => navigation.navigate('History' as never)} />
-          <Appbar.Action icon="cog" onPress={() => navigation.navigate('Settings' as never)} />
-        </Appbar.Header>
+        <View style={styles.header}>
+          <IconButton
+            icon="account-cog"
+            size={24}
+            onPress={() => navigation.navigate('Settings' as never)}
+          />
+          <IconButton
+            icon="file-pdf-box"
+            size={24}
+            onPress={saveToHistory}
+          />
+        </View>
         
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
-            <Card.Title title="Trade Details" titleStyle={styles.cardTitle} />
-            <Card.Content>
-              <CalculatorInput
-                label="Entry Price"
-                value={entryPrice}
-                onChangeText={setEntryPrice}
-                keyboardType="decimal-pad"
-                error={entryPriceError}
-                prefix="$"
-                autoFocus
-                returnKeyType="next"
-                onSubmitEditing={() => exitPriceRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-              
-              <CalculatorInput
-                label="Exit Price"
-                value={exitPrice}
-                onChangeText={setExitPrice}
-                keyboardType="decimal-pad"
-                error={exitPriceError}
-                prefix="$"
-                reference={exitPriceRef}
-                returnKeyType="next"
-                onSubmitEditing={() => quantityRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-              
-              <QuantitySelector
-                label="Quantity"
-                value={quantity}
-                onChangeText={setQuantity}
-                error={quantityError}
-                enableHaptics={enableHaptics}
-                min={1}
-              />
-              
-              <Button 
-                mode="contained" 
-                onPress={calculate}
-                style={styles.calculateButton}
-              >
-                Calculate
-              </Button>
-            </Card.Content>
-          </Card>
-          
-          <RiskManagementCard
-            entryPrice={entryPrice}
-            stopLoss={stopLoss}
-            setStopLoss={setStopLoss}
-            takeProfit={takeProfit}
-            setTakeProfit={setTakeProfit}
-            quantity={quantity}
-          />
-          
-          <AdvancedOptionsCard
-            commission={commission}
-            setCommission={setCommission}
-            slippage={slippage}
-            setSlippage={setSlippage}
-            positionFees={positionFees}
-            setPositionFees={setPositionFees}
-            taxRate={taxRate}
-            setTaxRate={setTaxRate}
-            includeCommission={includeCommission}
-            setIncludeCommission={setIncludeCommission}
-            includeSlippage={includeSlippage}
-            setIncludeSlippage={setIncludeSlippage}
-            includePositionFees={includePositionFees}
-            setIncludePositionFees={setIncludePositionFees}
-            includeTax={includeTax}
-            setIncludeTax={setIncludeTax}
-          />
-          
-          {calculationResult && (
-            <>
-              <ResultCard 
-                result={calculationResult} 
-                expanded={showExpandedResults}
-              />
-              
-              <View style={styles.resultActions}>
-                <Button 
-                  mode="outlined" 
-                  onPress={() => setShowExpandedResults(!showExpandedResults)}
-                  style={styles.actionButton}
-                >
-                  {showExpandedResults ? 'Show Less' : 'Show More'}
-                </Button>
-                
-                <Button 
-                  mode="outlined" 
-                  onPress={shareResults}
-                  style={styles.actionButton}
-                  icon="share"
-                >
-                  Share
-                </Button>
-                
-                <Button 
-                  mode="outlined" 
-                  onPress={saveToHistory}
-                  style={styles.actionButton}
-                  icon="content-save"
-                >
-                  Save
-                </Button>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Calculator</Text>
+              <View style={styles.cardActions}>
+                <IconButton icon="information" size={20} />
+                <IconButton icon="calculator-variant" size={20} />
               </View>
-            </>
-          )}
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Buying price</Text>
+              <View style={styles.inputContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={styles.input}
+                  value={buyingPrice}
+                  onChangeText={setBuyingPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Selling price</Text>
+              <View style={styles.inputContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={styles.input}
+                  value={sellingPrice}
+                  onChangeText={setSellingPrice}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Expected sale units</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={units}
+                  onChangeText={setUnits}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                />
+                <View style={styles.quantityButtons}>
+                  <IconButton icon="calculator" size={16} />
+                </View>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.advancedToggle}
+              onPress={() => setShowAdvanced(!showAdvanced)}
+            >
+              <Text style={styles.advancedToggleText}>ADVANCED</Text>
+              <IconButton 
+                icon={showAdvanced ? "chevron-up" : "chevron-down"} 
+                size={20} 
+              />
+            </TouchableOpacity>
+            
+            {showAdvanced && (
+              <View style={styles.advancedSection}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Operating expenses</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={operatingExpenses}
+                      onChangeText={setOperatingExpenses}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <View style={styles.quantityButtons}>
+                      <IconButton icon="calculator" size={16} />
+                    </View>
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Buying expenses per unit</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={buyingExpensesPerUnit}
+                      onChangeText={setBuyingExpensesPerUnit}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <IconButton icon="dots-vertical" size={20} />
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Selling expenses per unit</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={sellingExpensesPerUnit}
+                      onChangeText={setSellingExpensesPerUnit}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <IconButton icon="dots-vertical" size={20} />
+                  </View>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Tax rate</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={taxRate}
+                      onChangeText={setTaxRate}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                    />
+                    <Text style={styles.percentSymbol}>%</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
           
-          <View style={styles.spacer} />
+          {results && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Results</Text>
+                <IconButton icon="chart-line" size={20} />
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Revenue</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={styles.resultValue}>{formatCurrency(results.revenue)}</Text>
+                  <IconButton icon="content-copy" size={16} />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Cost of goods sold</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={styles.resultValue}>{formatCurrency(results.costOfGoodsSold)}</Text>
+                  <IconButton icon="content-copy" size={16} />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Net profit margin</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={[
+                    styles.resultValue, 
+                    {color: results.netProfitMargin >= 0 ? '#4CAF50' : '#F44336'}
+                  ]}>
+                    {formatPercentage(results.netProfitMargin)}
+                  </Text>
+                  <IconButton icon="content-copy" size={16} />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Net profit</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={[
+                    styles.resultValue, 
+                    {color: results.netProfit >= 0 ? '#4CAF50' : '#F44336'}
+                  ]}>
+                    {formatCurrency(results.netProfit)}
+                  </Text>
+                  <IconButton icon="content-copy" size={16} />
+                </View>
+              </View>
+              
+              <Divider style={styles.divider} />
+              <Text style={styles.additionalMetricsLabel}>Additional metrics</Text>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Cost of investment</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={styles.resultValue}>{formatCurrency(results.investment)}</Text>
+                  <IconButton icon="content-copy" size={16} />
+                </View>
+              </View>
+              
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Return on investment</Text>
+                <View style={styles.resultValueContainer}>
+                  <Text style={[
+                    styles.resultValue, 
+                    {color: results.roi >= 0 ? '#4CAF50' : '#F44336'}
+                  ]}>
+                    {formatPercentage(results.roi)}
+                  </Text>
+                  <IconButton icon="content-copy" size={16} />
+                </View>
+              </View>
+            </View>
+          )}
         </ScrollView>
-        
-        <FAB
-          icon="refresh"
-          style={[
-            styles.fab,
-            { backgroundColor: paperTheme.colors.primaryContainer }
-          ]}
-          onPress={resetForm}
-          visible={!!calculationResult}
-        />
-        
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={3000}
-          action={{
-            label: 'Dismiss',
-            onPress: () => setSnackbarVisible(false),
-          }}
-        >
-          {snackbarMessage}
-        </Snackbar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -403,43 +363,119 @@ Calculated with Profit & Loss Calculator
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5',
   },
   keyboardAvoidingView: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
   scrollView: {
     flex: 1,
   },
-  scrollViewContent: {
-    padding: 16,
-  },
   card: {
-    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    margin: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
-  cardTitle: {
-    fontWeight: 'bold',
-  },
-  calculateButton: {
-    marginTop: 16,
-  },
-  resultActions: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    alignItems: 'center',
     marginBottom: 16,
   },
-  actionButton: {
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: '#2196F3',
+  },
+  cardActions: {
+    flexDirection: 'row',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#757575',
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: '#757575',
+    paddingRight: 8,
+  },
+  percentSymbol: {
+    fontSize: 16,
+    color: '#757575',
+    paddingLeft: 8,
+  },
+  input: {
     flex: 1,
-    marginHorizontal: 4,
+    fontSize: 16,
+    paddingVertical: 8,
+    color: '#212121',
   },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
+  quantityButtons: {
+    flexDirection: 'row',
   },
-  spacer: {
-    height: 80,
+  advancedToggle: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  advancedToggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#757575',
+  },
+  advancedSection: {
+    marginTop: 8,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  resultLabel: {
+    fontSize: 14,
+    color: '#757575',
+  },
+  resultValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resultValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#212121',
+  },
+  divider: {
+    marginVertical: 16,
+  },
+  additionalMetricsLabel: {
+    fontSize: 14,
+    color: '#757575',
+    marginBottom: 8,
   },
 });

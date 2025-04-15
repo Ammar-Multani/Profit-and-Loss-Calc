@@ -23,34 +23,15 @@ function AppContent() {
         <Stack.Navigator 
           initialRouteName="Home"
           screenOptions={{
-            headerStyle: {
-              backgroundColor: theme.colors.surface,
-            },
-            headerTintColor: theme.colors.onSurface,
-            headerShadowVisible: false,
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: theme.colors.background,
+            }
           }}
         >
-          <Stack.Screen 
-            name="Home" 
-            component={HomeScreen} 
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="Settings" 
-            component={SettingsScreen}
-            options={{ 
-              title: 'Settings',
-              headerBackTitle: 'Back'
-            }}
-          />
-          <Stack.Screen 
-            name="History" 
-            component={HistoryScreen}
-            options={{ 
-              title: 'Calculation History',
-              headerBackTitle: 'Back'
-            }}
-          />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="History" component={HistoryScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
