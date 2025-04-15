@@ -418,10 +418,13 @@ export default function HomeScreen() {
               <View style={styles.cardHeader}>
                 <Text style={[styles.cardTitle, { color: isDarkMode ? '#90CAF9' : '#2196F3' }]}>Results</Text>
                 <IconButton 
-                  icon="chart-donut" 
+                  icon={showChart ? "chart-bar" : "chart-donut"} 
                   size={20} 
-                  color={isDarkMode ? '#90CAF9' : '#2196F3'} 
-                  onPress={() => setShowChart(!showChart)}
+                  iconColor={isDarkMode ? '#90CAF9' : '#2196F3'} 
+                  onPress={() => {
+                    setShowChart(!showChart);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
                 />
               </View>
               
