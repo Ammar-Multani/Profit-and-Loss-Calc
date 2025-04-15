@@ -37,50 +37,61 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
   
   // Add some padding to the max and min values
   const maxValue = positiveMax * 1.1;
-  const minValue = hasNegativeValues ? negativeMin * 1.1 : undefined;
+  const minValue = hasNegativeValues ? negativeMin * 1.1 : 0;
   
   const chartData = [
     {
       value: data.revenue,
       label: 'Revenue',
-      frontColor: colors.primary,
-      sideColor: colors.primary,
-      topColor: colors.primary,
+      frontColor: '#4285F4', // Google blue
+      topColor: '#4285F4',
+      sideColor: isDarkMode ? '#3367D6' : '#5A95F5',
       showGradient: true,
-      gradientColor: isDarkMode ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.3)',
+      gradientColor: isDarkMode ? 'rgba(66, 133, 244, 0.1)' : 'rgba(66, 133, 244, 0.3)',
     },
     {
       value: data.costOfGoodsSold,
       label: 'COGS',
-      frontColor: colors.error,
-      sideColor: colors.error,
-      topColor: colors.error,
+      frontColor: '#EA4335', // Google red
+      topColor: '#EA4335',
+      sideColor: isDarkMode ? '#C53929' : '#F15749',
       showGradient: true,
-      gradientColor: isDarkMode ? 'rgba(244, 67, 54, 0.1)' : 'rgba(244, 67, 54, 0.3)',
+      gradientColor: isDarkMode ? 'rgba(234, 67, 53, 0.1)' : 'rgba(234, 67, 53, 0.3)',
     },
     {
       value: data.totalExpenses,
       label: 'Expenses',
-      frontColor: colors.warning,
-      sideColor: colors.warning,
-      topColor: colors.warning,
+      frontColor: '#FBBC05', // Google yellow
+      topColor: '#FBBC05',
+      sideColor: isDarkMode ? '#F09300' : '#FCC934',
       showGradient: true,
-      gradientColor: isDarkMode ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 152, 0, 0.3)',
+      gradientColor: isDarkMode ? 'rgba(251, 188, 5, 0.1)' : 'rgba(251, 188, 5, 0.3)',
     },
     {
       value: data.netProfit,
       label: 'Net Profit',
-      frontColor: colors.success,
-      sideColor: colors.success,
-      topColor: colors.success,
+      frontColor: '#34A853', // Google green
+      topColor: '#34A853',
+      sideColor: isDarkMode ? '#2A8745' : '#4CC066',
       showGradient: true,
-      gradientColor: isDarkMode ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.3)',
+      gradientColor: isDarkMode ? 'rgba(52, 168, 83, 0.1)' : 'rgba(52, 168, 83, 0.3)',
     },
   ];
 
   // Format currency for display
   const formatCurrency = (value: number) => {
     return `$${Math.abs(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  };
+
+  // Format currency for y-axis labels (shorter format)
+  const formatYAxisLabel = (value: number) => {
+    if (Math.abs(value) >= 1000000) {
+      return `$${(Math.abs(value) / 1000000).toFixed(1)}M`;
+    } else if (Math.abs(value) >= 1000) {
+      return `$${(Math.abs(value) / 1000).toFixed(1)}K`;
+    } else {
+      return `$${Math.abs(value)}`;
+    }
   };
 
   return (
@@ -92,8 +103,8 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
         <View style={styles.chartContainer}>
           <BarChart
             data={chartData}
-            barWidth={Math.min(50, (screenWidth - 100) / 5)} // Responsive bar width
-            spacing={Math.min(24, (screenWidth - 100) / 10)} // Responsive spacing
+            barWidth={Math.min(45, (screenWidth - 120) / 5)} // Responsive bar width
+            spacing={Math.min(20, (screenWidth - 120) / 10)} // Responsive spacing
             roundedTop
             roundedBottom
             hideRules
@@ -122,6 +133,9 @@ const ResultsChart: React.FC<ResultsChartProps> = ({ data }) => {
             rulesColor={colors.border}
             dashWidth={4}
             dashGap={8}
+            yAxisLabelPrefix=""
+            yAxisLabelSuffix=""
+            formatYLabel={formatYAxisLabel}
             renderTooltip={(item) => (
               <View style={[styles.tooltip, { 
                 backgroundColor: colors.surface, 
@@ -171,6 +185,7 @@ const styles = StyleSheet.create({
   chartContainer: {
     marginHorizontal: -10, // Give more space for the chart
     height: 250,
+    paddingBottom: 20, // Add padding for the legend
   },
   tooltip: {
     padding: 12,
