@@ -100,13 +100,13 @@ export default function HomeScreen() {
     // Calculate gross profit margin
     const grossProfitMargin = (grossProfit / revenue) * 100;
     
-    // Selling and operating expenses (just operating expenses)
-    const totalExpenses = opExpenses;
+    // Calculate selling and operating expenses (operating expenses + selling expenses per unit)
+    const totalExpenses = opExpenses + (sellExpenses * quantity);
     
     // Calculate operating profit
     const operatingProfit = grossProfit - totalExpenses;
     
-    // Calculate tax amount
+    // Calculate tax amount (on operating profit)
     const taxAmount = (operatingProfit * tax) / 100;
     
     // Calculate net profit
@@ -115,8 +115,8 @@ export default function HomeScreen() {
     // Calculate net profit margin
     const netProfitMargin = (netProfit / revenue) * 100;
     
-    // Calculate cost of investment (COGS + operating expenses)
-    const investment = costOfGoodsSold + opExpenses;
+    // Calculate cost of investment (COGS + total expenses)
+    const investment = costOfGoodsSold + totalExpenses;
     
     // Calculate return on investment
     const roi = (netProfit / investment) * 100;
