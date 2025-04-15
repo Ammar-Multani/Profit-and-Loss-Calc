@@ -91,39 +91,39 @@ export default function HomeScreen() {
     // Calculate revenue
     const revenue = sellPrice * quantity;
     
-    // Calculate cost of goods sold
-    const costOfGoodsSold = buyPrice * quantity;
-    
-    // Calculate total expenses
-    const totalBuyingExpenses = buyExpenses * quantity;
-    const totalSellingExpenses = sellExpenses * quantity;
-    const totalExpenses = opExpenses + totalBuyingExpenses + totalSellingExpenses;
+    // Calculate cost of goods sold (including buying expenses per unit)
+    const costOfGoodsSold = (buyPrice * quantity) + (buyExpenses * quantity);
     
     // Calculate gross profit
     const grossProfit = revenue - costOfGoodsSold;
     
     // Calculate gross profit margin
-    const grossProfitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+    const grossProfitMargin = (grossProfit / revenue) * 100;
+    
+    // Selling and operating expenses (just operating expenses)
+    const totalExpenses = opExpenses;
     
     // Calculate operating profit
     const operatingProfit = grossProfit - totalExpenses;
     
-    // Calculate net profit margin
-    const netProfitMargin = revenue > 0 ? (operatingProfit / revenue) * 100 : 0;
-    
     // Calculate tax amount
-    const taxAmount = operatingProfit > 0 ? (operatingProfit * (tax / 100)) : 0;
+    const taxAmount = (operatingProfit * tax) / 100;
     
     // Calculate net profit
     const netProfit = operatingProfit - taxAmount;
     
+    // Calculate net profit margin
+    const netProfitMargin = (netProfit / revenue) * 100;
+    
+    // Calculate cost of investment (COGS + operating expenses)
+    const investment = costOfGoodsSold + opExpenses;
+    
     // Calculate return on investment
-    const investment = costOfGoodsSold + totalBuyingExpenses;
-    const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
+    const roi = (netProfit / investment) * 100;
     
     // Calculate break-even units
     const unitContribution = sellPrice - buyPrice - buyExpenses - sellExpenses;
-    const breakEvenUnits = unitContribution > 0 ? Math.ceil(opExpenses / unitContribution) : 0;
+    const breakEvenUnits = Math.ceil(opExpenses / unitContribution);
     
     setResults({
       revenue,
