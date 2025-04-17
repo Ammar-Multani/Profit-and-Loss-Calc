@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  StatusBar,
 } from "react-native";
 import { Text, IconButton, Divider, Button, Card } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
+import ViewShot from "react-native-view-shot";
 
 import { calculateResults } from "../utils/calculations";
 import { saveCalculation, getSettings } from "../utils/storage";
@@ -23,6 +23,7 @@ import { useTheme } from "../context/ThemeContext";
 import ResultsChart from "../components/ResultsChart";
 import CircularProgressDisplay from "../components/CircularProgressDisplay";
 import { generateUUID } from "../utils/uuid-helpers";
+import { exportToPdf } from "../utils/pdf-export";
 
 interface ResultsType {
   revenue: number;
@@ -99,16 +100,17 @@ export default function HomeScreen() {
     const tax = parseFloat(taxRate) || 0;
 
     const revenue = sellPrice * quantity;
-    const costOfGoodsSold = buyPrice * quantity + buyExpenses * quantity;
+    const costOfGoodsSold = (buyPrice + buyExpenses) * quantity;
     const grossProfit = revenue - costOfGoodsSold;
-    const grossProfitMargin = (grossProfit / revenue) * 100;
+    const grossProfitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
     const totalExpenses = opExpenses + sellExpenses * quantity;
     const operatingProfit = grossProfit - totalExpenses;
-    const taxAmount = (operatingProfit * tax) / 100;
+    // Only apply tax if operating profit is positive
+    const taxAmount = operatingProfit > 0 ? (operatingProfit * tax) / 100 : 0;
     const netProfit = operatingProfit - taxAmount;
-    const netProfitMargin = (netProfit / revenue) * 100;
+    const netProfitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
     const investment = costOfGoodsSold + totalExpenses;
-    const roi = (netProfit / investment) * 100;
+    const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
 
     const unitContribution = sellPrice - buyPrice - buyExpenses - sellExpenses;
 
@@ -247,86 +249,458 @@ export default function HomeScreen() {
   const hasAdvancedInputs =
     hasOperatingExpenses || hasTaxRate || hasBuyingSellingExpenses;
 
+  const renderEmptyState = () => {
+    return (
+      <View
+        style={[
+          styles.mainCard,
+          styles.emptyStateCard,
+          {
+            backgroundColor: isDarkMode
+              ? "rgba(30, 30, 30, 0.85)"
+              : "rgba(255, 255, 255, 0.85)",
+            borderColor: isDarkMode
+              ? "rgba(75, 75, 75, 0.2)"
+              : "rgba(230, 230, 230, 0.8)",
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={
+            isDarkMode
+              ? ["rgba(40, 40, 40, 0.7)", "rgba(30, 30, 30, 0.5)"]
+              : ["rgba(255, 255, 255, 0.95)", "rgba(250, 250, 255, 0.85)"]
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.emptyStateGradient}
+        >
+          <View style={styles.emptyStateIconContainer}>
+            <IconButton
+              icon="calculator-variant"
+              size={50}
+              iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+            />
+          </View>
+          <Text
+            style={[
+              styles.emptyStateTitle,
+              { color: isDarkMode ? "#FFFFFF" : "#333333" },
+            ]}
+          >
+            Ready to Calculate
+          </Text>
+          <Text
+            style={[
+              styles.emptyStateDescription,
+              { color: isDarkMode ? "#AAAAAA" : "#757575" },
+            ]}
+          >
+            Enter buying price, selling price, and units to see profit and loss
+            calculations
+          </Text>
+          <View style={styles.emptyStateTipsContainer}>
+            <View style={styles.emptyStateTipRow}>
+              <View
+                style={[
+                  styles.emptyStateTipBullet,
+                  { backgroundColor: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.emptyStateTipText,
+                  { color: isDarkMode ? "#DDDDDD" : "#555555" },
+                ]}
+              >
+                Try the advanced options for detailed analysis
+              </Text>
+            </View>
+            <View style={styles.emptyStateTipRow}>
+              <View
+                style={[
+                  styles.emptyStateTipBullet,
+                  { backgroundColor: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.emptyStateTipText,
+                  { color: isDarkMode ? "#DDDDDD" : "#555555" },
+                ]}
+              >
+                Save calculations to track your profits over time
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  };
+
+  const handleExportPdf = async () => {
+    if (!results) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await exportToPdf({
+        resultsData: results,
+        fileName: `ProfitLoss-Report`,
+        buyingPrice: parseFloat(buyingPrice) || 0,
+        sellingPrice: parseFloat(sellingPrice) || 0,
+        units: parseFloat(units) || 0,
+        operatingExpenses: parseFloat(operatingExpenses) || 0,
+        buyingExpensesPerUnit: parseFloat(buyingExpensesPerUnit) || 0,
+        sellingExpensesPerUnit: parseFloat(sellingExpensesPerUnit) || 0,
+        taxRate: parseFloat(taxRate) || 0,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error("Failed to export PDF:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
-        { backgroundColor: isDarkMode ? "#121212" : "#F5F5F5" },
+        { backgroundColor: isDarkMode ? "#121212" : "#F8F9FA" },
       ]}
     >
-      <StatusBar
-        barStyle={isDarkMode ? "light-content" : "dark-content"}translucent 
-      />
-
-
-        <View       style={[
-        styles.header,
-        { backgroundColor: isDarkMode ? "#121212" : "#F5F5F5" , borderBottomColor: isDarkMode ? "#333333" : "#E0E0E0" },
-      ]}
-    >
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+            borderBottomColor: isDarkMode
+              ? "rgba(75, 75, 75, 0.3)"
+              : "rgba(230, 230, 230, 0.8)",
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={
+            isDarkMode
+              ? ["rgba(40, 40, 40, 0.8)", "rgba(30, 30, 30, 0.8)"]
+              : ["rgba(255, 255, 255, 1)", "rgba(250, 250, 250, 0.95)"]
+          }
+          style={styles.headerGradient}
+        >
           <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Profit & Loss</Text>
-            <Text style={styles.headerSubtitle}>Calculator</Text>
+            <Text
+              style={[
+                styles.headerTitle,
+                { color: isDarkMode ? "#FFFFFF" : "#333333" },
+              ]}
+            >
+              Profit & Loss
+            </Text>
+            <Text
+              style={[
+                styles.headerSubtitle,
+                { color: isDarkMode ? "#AAAAAA" : "#757575" },
+              ]}
+            >
+              Calculator
+            </Text>
           </View>
           <View style={styles.headerActions}>
             <IconButton
               icon="history"
               size={24}
+              iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+              style={styles.headerIcon}
               onPress={() => navigation.navigate("History" as never)}
             />
             <IconButton
               icon="cog"
               size={24}
+              iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+              style={styles.headerIcon}
               onPress={() => navigation.navigate("Settings" as never)}
             />
           </View>
-        </View>
+        </LinearGradient>
+      </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+        <View
+          style={[
+            styles.mainCard,
+            {
+              backgroundColor: isDarkMode ? "#1E1E1E" : "white",
+              borderColor: isDarkMode
+                ? "rgba(75, 75, 75, 0.2)"
+                : "rgba(230, 230, 230, 0.8)",
+              borderWidth: 1,
+            },
+          ]}
         >
-          <View
-            style={[
-              styles.mainCard,
-              { backgroundColor: isDarkMode ? "#1E1E1E" : "white" },
-            ]}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.titleContainer}>
+          <View style={styles.cardHeader}>
+            <View style={styles.titleContainer}>
+              <View
+                style={[
+                  styles.titleAccent,
+                  { backgroundColor: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.cardTitle,
+                  { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                ]}
+              >
+                Input Values
+              </Text>
+            </View>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.resetButton,
+                  {
+                    backgroundColor: isDarkMode
+                      ? "rgba(50, 50, 50, 0.7)"
+                      : "rgba(255, 255, 255, 0.88)",
+                    borderColor: isDarkMode
+                      ? "rgba(70, 70, 70, 0.5)"
+                      : "rgba(210, 210, 210, 0.8)",
+                  },
+                ]}
+                onPress={resetCalculator}
+              >
                 <Text
                   style={[
-                    styles.cardTitle,
-                    { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                    styles.resetButtonText,
+                    { color: isDarkMode ? "#BBBBBB" : "#616161" },
                   ]}
                 >
-                  Input Values
+                  Reset
                 </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.inputSection}>
+            <View style={styles.inputRow}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: isDarkMode ? "#BBBBBB" : "#616161" },
+                  ]}
+                >
+                  Buying price
+                </Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      borderColor: isDarkMode
+                        ? "rgba(70, 70, 70, 0.5)"
+                        : "rgba(210, 210, 210, 0.8)",
+                      backgroundColor: isDarkMode
+                        ? "rgba(45, 45, 45, 0.5)"
+                        : "rgba(248, 249, 250, 0.8)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.currencySymbol,
+                      { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                    ]}
+                  >
+                    $
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                    ]}
+                    value={buyingPrice}
+                    onChangeText={setBuyingPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.inputGroup, { flex: 1, marginLeft: 16 }]}>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: isDarkMode ? "#BBBBBB" : "#616161" },
+                  ]}
+                >
+                  Selling price
+                </Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      borderColor: isDarkMode
+                        ? "rgba(70, 70, 70, 0.5)"
+                        : "rgba(210, 210, 210, 0.8)",
+                      backgroundColor: isDarkMode
+                        ? "rgba(45, 45, 45, 0.5)"
+                        : "rgba(248, 249, 250, 0.8)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.currencySymbol,
+                      { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                    ]}
+                  >
+                    $
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                    ]}
+                    value={sellingPrice}
+                    onChangeText={setSellingPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
+                  />
+                </View>
               </View>
             </View>
 
-            <View style={styles.inputSection}>
+            <View style={styles.inputGroup}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: isDarkMode ? "#BBBBBB" : "#616161" },
+                ]}
+              >
+                Expected sale units
+              </Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    borderColor: isDarkMode
+                      ? "rgba(70, 70, 70, 0.5)"
+                      : "rgba(210, 210, 210, 0.8)",
+                    backgroundColor: isDarkMode
+                      ? "rgba(45, 45, 45, 0.5)"
+                      : "rgba(248, 249, 250, 0.8)",
+                  },
+                ]}
+              >
+                <TextInput
+                  style={[
+                    styles.input,
+                    { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                  ]}
+                  value={units}
+                  onChangeText={setUnits}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
+                />
+                <View style={styles.quantityButtons}>
+                  <IconButton
+                    icon="minus"
+                    size={16}
+                    iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                    style={styles.unitButton}
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      if (currentValue > 0) {
+                        setUnits((currentValue - 1).toString());
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                    }}
+                  />
+                  <IconButton
+                    icon="plus"
+                    size={16}
+                    iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                    style={styles.unitButton}
+                    onPress={() => {
+                      const currentValue = parseInt(units) || 0;
+                      setUnits((currentValue + 1).toString());
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <LinearGradient
+            colors={
+              isDarkMode
+                ? ["rgba(45, 45, 45, 0.5)", "rgba(35, 35, 35, 0.5)"]
+                : ["rgba(243, 243, 243, 0.53)", "rgba(255, 255, 255, 0.79)"]
+            }
+            style={[
+              styles.advancedToggleContainer,
+              {
+                borderColor: isDarkMode
+                  ? "rgba(70, 70, 70, 0.5)"
+                  : "rgba(210, 210, 210, 0.8)",
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.advancedToggle}
+              onPress={() => {
+                setShowAdvanced(!showAdvanced);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Text
+                style={[
+                  styles.advancedToggleText,
+                  { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              >
+                {showAdvanced
+                  ? "HIDE ADVANCED OPTIONS"
+                  : "SHOW ADVANCED OPTIONS"}
+              </Text>
+              <IconButton
+                icon={showAdvanced ? "chevron-up" : "chevron-down"}
+                size={20}
+                iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+              />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          {showAdvanced && (
+            <View style={styles.advancedSection}>
               <View style={styles.inputRow}>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <Text
                     style={[
                       styles.inputLabel,
-                      { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                      { color: isDarkMode ? "#BBBBBB" : "#616161" },
                     ]}
                   >
-                    Buying price
+                    Operating expenses
                   </Text>
                   <View
                     style={[
                       styles.inputContainer,
                       {
-                        borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                        backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
+                        borderColor: isDarkMode
+                          ? "rgba(70, 70, 70, 0.5)"
+                          : "rgba(210, 210, 210, 0.8)",
+                        backgroundColor: isDarkMode
+                          ? "rgba(45, 45, 45, 0.5)"
+                          : "rgba(248, 249, 250, 0.8)",
                       },
                     ]}
                   >
@@ -343,8 +717,86 @@ export default function HomeScreen() {
                         styles.input,
                         { color: isDarkMode ? "#FFFFFF" : "#212121" },
                       ]}
-                      value={buyingPrice}
-                      onChangeText={setBuyingPrice}
+                      value={operatingExpenses}
+                      onChangeText={setOperatingExpenses}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
+                    />
+                    <View style={styles.quantityButtons}>
+                      <IconButton
+                        icon="minus"
+                        size={16}
+                        iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                        style={styles.unitButton}
+                        onPress={() => {
+                          const currentValue =
+                            parseFloat(operatingExpenses) || 0;
+                          if (currentValue > 0) {
+                            setOperatingExpenses((currentValue - 1).toString());
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Light
+                            );
+                          }
+                        }}
+                      />
+                      <IconButton
+                        icon="plus"
+                        size={16}
+                        iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                        style={styles.unitButton}
+                        onPress={() => {
+                          const currentValue =
+                            parseFloat(operatingExpenses) || 0;
+                          setOperatingExpenses((currentValue + 1).toString());
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light
+                          );
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { color: isDarkMode ? "#BBBBBB" : "#616161" },
+                    ]}
+                  >
+                    Buying expenses per unit
+                  </Text>
+                  <View
+                    style={[
+                      styles.inputContainer,
+                      {
+                        borderColor: isDarkMode
+                          ? "rgba(70, 70, 70, 0.5)"
+                          : "rgba(210, 210, 210, 0.8)",
+                        backgroundColor: isDarkMode
+                          ? "rgba(45, 45, 45, 0.5)"
+                          : "rgba(248, 249, 250, 0.8)",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.currencySymbol,
+                        { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                      ]}
+                    >
+                      $
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                      ]}
+                      value={buyingExpensesPerUnit}
+                      onChangeText={setBuyingExpensesPerUnit}
                       keyboardType="decimal-pad"
                       placeholder="0"
                       placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
@@ -356,17 +808,21 @@ export default function HomeScreen() {
                   <Text
                     style={[
                       styles.inputLabel,
-                      { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                      { color: isDarkMode ? "#BBBBBB" : "#616161" },
                     ]}
                   >
-                    Selling price
+                    Selling expenses per unit
                   </Text>
                   <View
                     style={[
                       styles.inputContainer,
                       {
-                        borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                        backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
+                        borderColor: isDarkMode
+                          ? "rgba(70, 70, 70, 0.5)"
+                          : "rgba(210, 210, 210, 0.8)",
+                        backgroundColor: isDarkMode
+                          ? "rgba(45, 45, 45, 0.5)"
+                          : "rgba(248, 249, 250, 0.8)",
                       },
                     ]}
                   >
@@ -383,8 +839,8 @@ export default function HomeScreen() {
                         styles.input,
                         { color: isDarkMode ? "#FFFFFF" : "#212121" },
                       ]}
-                      value={sellingPrice}
-                      onChangeText={setSellingPrice}
+                      value={sellingExpensesPerUnit}
+                      onChangeText={setSellingExpensesPerUnit}
                       keyboardType="decimal-pad"
                       placeholder="0"
                       placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
@@ -397,17 +853,21 @@ export default function HomeScreen() {
                 <Text
                   style={[
                     styles.inputLabel,
-                    { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                    { color: isDarkMode ? "#BBBBBB" : "#616161" },
                   ]}
                 >
-                  Expected sale units
+                  Tax rate
                 </Text>
                 <View
                   style={[
                     styles.inputContainer,
                     {
-                      borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                      backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
+                      borderColor: isDarkMode
+                        ? "rgba(70, 70, 70, 0.5)"
+                        : "rgba(210, 210, 210, 0.8)",
+                      backgroundColor: isDarkMode
+                        ? "rgba(45, 45, 45, 0.5)"
+                        : "rgba(248, 249, 250, 0.8)",
                     },
                   ]}
                 >
@@ -416,519 +876,428 @@ export default function HomeScreen() {
                       styles.input,
                       { color: isDarkMode ? "#FFFFFF" : "#212121" },
                     ]}
-                    value={units}
-                    onChangeText={setUnits}
+                    value={taxRate}
+                    onChangeText={setTaxRate}
                     keyboardType="decimal-pad"
                     placeholder="0"
                     placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
                   />
-                  <View style={styles.quantityButtons}>
-                    <IconButton
-                      icon="minus"
-                      size={16}
-                      iconColor={isDarkMode ? "#BBBBBB" : "#757575"}
-                      onPress={() => {
-                        const currentValue = parseInt(units) || 0;
-                        if (currentValue > 0) {
-                          setUnits((currentValue - 1).toString());
-                        }
-                      }}
-                    />
-                    <IconButton
-                      icon="plus"
-                      size={16}
-                      iconColor={isDarkMode ? "#BBBBBB" : "#757575"}
-                      onPress={() => {
-                        const currentValue = parseInt(units) || 0;
-                        setUnits((currentValue + 1).toString());
-                      }}
-                    />
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.advancedToggle]}
-              onPress={() => setShowAdvanced(!showAdvanced)}
-            >
-              <Text
-                style={[
-                  styles.advancedToggleText,
-                  { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                ]}
-              >
-                ADVANCED OPTIONS
-              </Text>
-              <IconButton
-                icon={showAdvanced ? "chevron-up" : "chevron-down"}
-                size={20}
-                iconColor={isDarkMode ? "#BBBBBB" : "#757575"}
-              />
-            </TouchableOpacity>
-
-            {showAdvanced && (
-              <View style={styles.advancedSection}>
-                <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                      ]}
-                    >
-                      Operating expenses
-                    </Text>
-                    <View
-                      style={[
-                        styles.inputContainer,
-                        {
-                          borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                          backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.currencySymbol,
-                          { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                        ]}
-                      >
-                        $
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.input,
-                          { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                        ]}
-                        value={operatingExpenses}
-                        onChangeText={setOperatingExpenses}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={
-                          isDarkMode ? "#555555" : "#AAAAAA"
-                        }
-                      />
-                      <View style={styles.quantityButtons}>
-                        <IconButton
-                          icon="minus"
-                          size={16}
-                          iconColor={isDarkMode ? "#BBBBBB" : "#757575"}
-                          onPress={() => {
-                            const currentValue =
-                              parseFloat(operatingExpenses) || 0;
-                            if (currentValue > 0) {
-                              setOperatingExpenses(
-                                (currentValue - 1).toString()
-                              );
-                            }
-                          }}
-                        />
-                        <IconButton
-                          icon="plus"
-                          size={16}
-                          iconColor={isDarkMode ? "#BBBBBB" : "#757575"}
-                          onPress={() => {
-                            const currentValue =
-                              parseFloat(operatingExpenses) || 0;
-                            setOperatingExpenses((currentValue + 1).toString());
-                          }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                      ]}
-                    >
-                      Buying expenses per unit
-                    </Text>
-                    <View
-                      style={[
-                        styles.inputContainer,
-                        {
-                          borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                          backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.currencySymbol,
-                          { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                        ]}
-                      >
-                        $
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.input,
-                          { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                        ]}
-                        value={buyingExpensesPerUnit}
-                        onChangeText={setBuyingExpensesPerUnit}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={
-                          isDarkMode ? "#555555" : "#AAAAAA"
-                        }
-                      />
-                    </View>
-                  </View>
-
-                  <View
-                    style={[styles.inputGroup, { flex: 1, marginLeft: 16 }]}
-                  >
-                    <Text
-                      style={[
-                        styles.inputLabel,
-                        { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                      ]}
-                    >
-                      Selling expenses per unit
-                    </Text>
-                    <View
-                      style={[
-                        styles.inputContainer,
-                        {
-                          borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                          backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.currencySymbol,
-                          { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                        ]}
-                      >
-                        $
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.input,
-                          { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                        ]}
-                        value={sellingExpensesPerUnit}
-                        onChangeText={setSellingExpensesPerUnit}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor={
-                          isDarkMode ? "#555555" : "#AAAAAA"
-                        }
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.inputGroup}>
                   <Text
                     style={[
-                      styles.inputLabel,
+                      styles.percentSymbol,
                       { color: isDarkMode ? "#BBBBBB" : "#757575" },
                     ]}
                   >
-                    Tax rate
+                    %
                   </Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {results ? (
+          <View
+            style={[
+              styles.mainCard,
+              styles.resultsCard,
+              {
+                backgroundColor: isDarkMode
+                  ? "rgba(30, 30, 30, 0.85)"
+                  : "rgba(255, 255, 255, 0.85)",
+                borderColor: isDarkMode
+                  ? "rgba(75, 75, 75, 0.2)"
+                  : "rgba(230, 230, 230, 0.8)",
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={
+                isDarkMode
+                  ? ["rgba(40, 40, 40, 0.7)", "rgba(30, 30, 30, 0.5)"]
+                  : ["rgba(255, 255, 255, 0.95)", "rgba(250, 250, 255, 0.85)"]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.resultsGradientOverlay}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.titleContainer}>
                   <View
                     style={[
-                      styles.inputContainer,
+                      styles.titleAccent,
                       {
-                        borderColor: isDarkMode ? "#333333" : "#E0E0E0",
-                        backgroundColor: isDarkMode ? "#2A2A2A" : "#F9F9F9",
+                        backgroundColor:
+                          results.netProfit >= 0 ? "#4CAF50" : "#F44336",
+                      },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                    ]}
+                  >
+                    Results
+                  </Text>
+                </View>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButtonContainer,
+                      { opacity: hasAdvancedInputs ? 1 : 0.5 },
+                    ]}
+                    onPress={() => {
+                      if (hasAdvancedInputs) {
+                        setShowChart(!showChart);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                    }}
+                    disabled={!hasAdvancedInputs}
+                  >
+                    <LinearGradient
+                      colors={
+                        isDarkMode
+                          ? ["rgba(40, 40, 40, 0.8)", "rgba(50, 50, 50, 0.8)"]
+                          : [
+                              "rgba(243, 243, 243, 0.8)",
+                              "rgba(255, 255, 255, 0.92)",
+                            ]
+                      }
+                      style={[
+                        styles.actionButton,
+                        {
+                          borderColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
+                        },
+                      ]}
+                    >
+                      <IconButton
+                        icon={showChart ? "format-list-bulleted" : "chart-pie"}
+                        size={18}
+                        iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                        onPress={() => {
+                          if (hasAdvancedInputs) {
+                            setShowChart(!showChart);
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Light
+                            );
+                          }
+                        }}
+                        disabled={!hasAdvancedInputs}
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButtonContainer}
+                    onPress={handleExportPdf}
+                  >
+                    <LinearGradient
+                      colors={
+                        isDarkMode
+                          ? ["rgba(40, 40, 40, 0.8)", "rgba(50, 50, 50, 0.8)"]
+                          : [
+                              "rgba(243, 243, 243, 0.8)",
+                              "rgba(255, 255, 255, 0.92)",
+                            ]
+                      }
+                      style={[
+                        styles.actionButton,
+                        {
+                          borderColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
+                        },
+                      ]}
+                    >
+                      <IconButton
+                        icon="file-pdf-box"
+                        size={18}
+                        iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                        onPress={handleExportPdf}
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButtonContainer}
+                    onPress={() => {
+                      saveToHistory();
+                    }}
+                  >
+                    <LinearGradient
+                      colors={
+                        isDarkMode
+                          ? ["rgba(40, 40, 40, 0.8)", "rgba(50, 50, 50, 0.8)"]
+                          : [
+                              "rgba(243, 243, 243, 0.8)",
+                              "rgba(255, 255, 255, 0.92)",
+                            ]
+                      }
+                      style={[
+                        styles.actionButton,
+                        {
+                          borderColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
+                        },
+                      ]}
+                    >
+                      <IconButton
+                        icon="content-save"
+                        size={18}
+                        iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                        onPress={() => {
+                          saveToHistory();
+                        }}
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {showChart && hasAdvancedInputs ? (
+                <View style={styles.chartView}>
+                  <LinearGradient
+                    colors={
+                      isDarkMode
+                        ? ["rgba(45, 45, 45, 0.9)", "rgba(35, 35, 35, 0.7)"]
+                        : [
+                            "rgba(255, 255, 255, 0.9)",
+                            "rgba(255, 255, 255, 0.84)",
+                          ]
+                    }
+                    style={[
+                      styles.chartCard,
+                      {
+                        borderColor: isDarkMode
+                          ? "rgba(80, 80, 80, 0.5)"
+                          : "rgba(220, 220, 220, 0.8)",
                       },
                     ]}
                   >
-                    <TextInput
-                      style={[
-                        styles.input,
-                        { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                      ]}
-                      value={taxRate}
-                      onChangeText={setTaxRate}
-                      keyboardType="decimal-pad"
-                      placeholder="0"
-                      placeholderTextColor={isDarkMode ? "#555555" : "#AAAAAA"}
-                    />
-                    <Text
-                      style={[
-                        styles.percentSymbol,
-                        { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                      ]}
-                    >
-                      %
-                    </Text>
-                  </View>
+                    {renderResultsChart()}
+                  </LinearGradient>
                 </View>
-              </View>
-            )}
-          </View>
-
-          {results && (
-            <View
-              style={[
-                styles.mainCard,
-                styles.resultsCard,
-                {
-                  backgroundColor: isDarkMode
-                    ? "rgba(30, 30, 30, 0.85)"
-                    : "rgba(255, 255, 255, 0.85)",
-                },
-              ]}
-            >
-              <LinearGradient
-                colors={
-                  isDarkMode
-                    ? ["rgba(32, 32, 32, 0.7)", "rgba(25, 25, 25, 0.5)"]
-                    : ["rgba(255, 255, 255, 0.9)", "rgba(248, 248, 252, 0.8)"]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.resultsGradientOverlay}
-              >
-                <View style={styles.cardHeader}>
-                  <View style={styles.titleContainer}>
-                    <Text
+              ) : (
+                <View style={styles.resultsContainer}>
+                  <LinearGradient
+                    colors={
+                      isDarkMode
+                        ? ["rgba(45, 45, 45, 0.8)", "rgba(35, 35, 35, 0.6)"]
+                        : [
+                            "rgba(255, 255, 255, 0.9)",
+                            "rgba(250, 250, 255, 0.7)",
+                          ]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[
+                      styles.resultCardGradient,
+                      {
+                        borderColor: isDarkMode
+                          ? "rgba(80, 80, 80, 0.5)"
+                          : "rgba(220, 220, 220, 0.8)",
+                      },
+                    ]}
+                  >
+                    {/* Revenue */}
+                    <View
                       style={[
-                        styles.cardTitle,
-                        { color: isDarkMode ? "#90CAF9" : "#2196F3" },
-                      ]}
-                    >
-                      Results
-                    </Text>
-                  </View>
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.actionButtonContainer,
-                        { opacity: hasAdvancedInputs ? 1 : 0.5 },
-                      ]}
-                      onPress={() =>
-                        hasAdvancedInputs && setShowChart(!showChart)
-                      }
-                      disabled={!hasAdvancedInputs}
-                    >
-                      <LinearGradient
-                        colors={
-                          isDarkMode
-                            ? ["rgba(30, 30, 30, 0.8)", "rgba(40, 40, 40, 0.8)"]
-                            : [
-                                "rgba(245, 245, 245, 0.8)",
-                                "rgba(235, 235, 235, 0.8)",
-                              ]
-                        }
-                        style={[
-                          styles.actionButton,
-                          {
-                            borderColor: isDarkMode
-                              ? "rgba(60, 60, 60, 0.3)"
-                              : "rgba(230, 230, 230, 0.5)",
-                          },
-                        ]}
-                      >
-                        <IconButton
-                          icon={
-                            showChart ? "format-list-bulleted" : "chart-pie"
-                          }
-                          size={18}
-                          iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
-                          onPress={() =>
-                            hasAdvancedInputs && setShowChart(!showChart)
-                          }
-                          disabled={!hasAdvancedInputs}
-                        />
-                      </LinearGradient>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.actionButtonContainer}
-                      onPress={saveToHistory}
-                    >
-                      <LinearGradient
-                        colors={
-                          isDarkMode
-                            ? ["rgba(30, 30, 30, 0.8)", "rgba(40, 40, 40, 0.8)"]
-                            : [
-                                "rgba(245, 245, 245, 0.8)",
-                                "rgba(235, 235, 235, 0.8)",
-                              ]
-                        }
-                        style={[
-                          styles.actionButton,
-                          {
-                            borderColor: isDarkMode
-                              ? "rgba(60, 60, 60, 0.3)"
-                              : "rgba(230, 230, 230, 0.5)",
-                          },
-                        ]}
-                      >
-                        <IconButton
-                          icon="content-save"
-                          size={18}
-                          iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
-                          onPress={saveToHistory}
-                        />
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {showChart && hasAdvancedInputs ? (
-                  <View style={styles.chartView}>
-                    <LinearGradient
-                      colors={
-                        isDarkMode
-                          ? ["rgba(37, 37, 37, 0.9)", "rgba(30, 30, 30, 0.7)"]
-                          : [
-                              "rgba(248, 249, 250, 0.9)",
-                              "rgba(240, 242, 245, 0.7)",
-                            ]
-                      }
-                      style={[
-                        styles.chartCard,
+                        styles.resultItem,
                         {
-                          borderColor: isDarkMode
-                            ? "rgba(60, 60, 60, 0.5)"
-                            : "rgba(230, 230, 230, 0.8)",
+                          borderBottomColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
                         },
                       ]}
                     >
-                      {renderResultsChart()}
-                    </LinearGradient>
-                  </View>
-                ) : (
-                  <View style={styles.resultsContainer}>
-                    <LinearGradient
-                      colors={
-                        isDarkMode
-                          ? ["rgba(37, 37, 37, 0.8)", "rgba(30, 30, 30, 0.6)"]
-                          : [
-                              "rgba(255, 255, 255, 0.8)",
-                              "rgba(248, 248, 252, 0.6)",
-                            ]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+                      <View style={styles.resultLabelRow}>
+                        <Text
+                          style={[
+                            styles.resultLabel,
+                            { color: isDarkMode ? "#DDDDDD" : "#555555" },
+                          ]}
+                        >
+                          Revenue
+                        </Text>
+                        <View
+                          style={[styles.badge, { backgroundColor: "#5C6BC0" }]}
+                        >
+                          <Text style={styles.badgeText}>TOTAL</Text>
+                        </View>
+                      </View>
+                      <View style={styles.resultValueRow}>
+                        <Text
+                          style={[
+                            styles.resultValueText,
+                            { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                          ]}
+                        >
+                          {formatCurrency(results.revenue)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Cost of goods sold */}
+                    <View
                       style={[
-                        styles.resultCardGradient,
+                        styles.resultItem,
                         {
-                          borderColor: isDarkMode
-                            ? "rgba(60, 60, 60, 0.5)"
-                            : "rgba(230, 230, 230, 0.8)",
+                          borderBottomColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
                         },
                       ]}
                     >
-                      {/* Revenue */}
-                      <View
-                        style={[
-                          styles.resultItem,
-                          {
-                            borderBottomColor: isDarkMode
-                              ? "rgba(60, 60, 60, 0.5)"
-                              : "rgba(230, 230, 230, 0.8)",
-                          },
-                        ]}
-                      >
-                        <View style={styles.resultLabelRow}>
+                      <View style={styles.resultLabelRow}>
+                        <Text
+                          style={[
+                            styles.resultLabel,
+                            { color: isDarkMode ? "#DDDDDD" : "#555555" },
+                          ]}
+                        >
+                          Cost of goods sold
+                        </Text>
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: "rgba(158, 158, 158, 0.9)" },
+                          ]}
+                        >
+                          <Text style={styles.badgeText}>COGS</Text>
+                        </View>
+                      </View>
+                      <View style={styles.resultValueRow}>
+                        <Text
+                          style={[
+                            styles.resultValueText,
+                            { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                          ]}
+                        >
+                          {formatCurrency(results.costOfGoodsSold)}
+                        </Text>
+                        <View
+                          style={[
+                            styles.percentChip,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "rgba(35, 35, 35, 0.7)"
+                                : "rgba(240, 240, 240, 0.7)",
+                              borderColor: isDarkMode
+                                ? "rgba(80, 80, 80, 0.5)"
+                                : "rgba(220, 220, 220, 0.8)",
+                            },
+                          ]}
+                        >
                           <Text
                             style={[
-                              styles.resultLabel,
+                              styles.percentText,
                               { color: isDarkMode ? "#BBBBBB" : "#757575" },
                             ]}
                           >
-                            Revenue
-                          </Text>
-                          <View style={styles.badge}>
-                            <Text style={styles.badgeText}>TOTAL</Text>
-                          </View>
-                        </View>
-                        <View style={styles.resultValueRow}>
-                          <Text
-                            style={[
-                              styles.resultValueText,
-                              { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                            ]}
-                          >
-                            {formatCurrency(results.revenue)}
+                            {(
+                              (results.costOfGoodsSold / results.revenue) *
+                              100
+                            ).toFixed(1)}
+                            %
                           </Text>
                         </View>
                       </View>
+                    </View>
 
-                      {/* Cost of goods sold */}
-                      <View
-                        style={[
-                          styles.resultItem,
-                          {
-                            borderBottomColor: isDarkMode
-                              ? "rgba(60, 60, 60, 0.5)"
-                              : "rgba(230, 230, 230, 0.8)",
-                          },
-                        ]}
-                      >
-                        <View style={styles.resultLabelRow}>
-                          <Text
-                            style={[
-                              styles.resultLabel,
-                              { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                            ]}
-                          >
-                            Cost of goods sold
-                          </Text>
-                          <View
-                            style={[
-                              styles.badge,
-                              { backgroundColor: "rgba(179, 155, 128, 0.9)" },
-                            ]}
-                          >
-                            <Text style={styles.badgeText}>COGS</Text>
-                          </View>
+                    {/* Gross Profit */}
+                    <View
+                      style={[
+                        styles.resultItem,
+                        {
+                          borderBottomColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
+                        },
+                      ]}
+                    >
+                      <View style={styles.resultLabelRow}>
+                        <Text
+                          style={[
+                            styles.resultLabel,
+                            { color: isDarkMode ? "#DDDDDD" : "#555555" },
+                          ]}
+                        >
+                          Gross profit
+                        </Text>
+                        <View
+                          style={[
+                            styles.badge,
+                            {
+                              backgroundColor:
+                                results.grossProfit >= 0
+                                  ? "rgba(76, 175, 80, 0.9)"
+                                  : "rgba(244, 67, 54, 0.9)",
+                            },
+                          ]}
+                        >
+                          <Text style={styles.badgeText}>GP</Text>
                         </View>
-                        <View style={styles.resultValueRow}>
+                      </View>
+                      <View style={styles.resultValueRow}>
+                        <Text
+                          style={[
+                            styles.resultValueText,
+                            {
+                              color:
+                                results.grossProfit >= 0
+                                  ? "#4CAF50"
+                                  : "#F44336",
+                            },
+                          ]}
+                        >
+                          {results.grossProfit < 0 && "-"}
+                          {formatCurrency(Math.abs(results.grossProfit))}
+                        </Text>
+                        <View
+                          style={[
+                            styles.percentChip,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "rgba(35, 35, 35, 0.7)"
+                                : "rgba(240, 240, 240, 0.7)",
+                              borderColor: isDarkMode
+                                ? "rgba(80, 80, 80, 0.5)"
+                                : "rgba(220, 220, 220, 0.8)",
+                            },
+                          ]}
+                        >
                           <Text
                             style={[
-                              styles.resultValueText,
-                              { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                            ]}
-                          >
-                            {formatCurrency(results.costOfGoodsSold)}
-                          </Text>
-                          <View
-                            style={[
-                              styles.percentChip,
+                              styles.percentText,
                               {
-                                backgroundColor: isDarkMode
-                                  ? "rgba(26, 26, 26, 0.5)"
-                                  : "rgba(234, 234, 234, 0.5)",
-                                borderColor: isDarkMode
-                                  ? "rgba(60, 60, 60, 0.5)"
-                                  : "rgba(230, 230, 230, 0.8)",
+                                color:
+                                  results.grossProfit >= 0
+                                    ? "#4CAF50"
+                                    : "#F44336",
                               },
                             ]}
                           >
-                            <Text style={styles.percentText}>
-                              {(
-                                (results.costOfGoodsSold / results.revenue) *
-                                100
-                              ).toFixed(1)}
-                              %
-                            </Text>
-                          </View>
+                            {(
+                              (results.grossProfit / results.revenue) *
+                              100
+                            ).toFixed(1)}
+                            %
+                          </Text>
                         </View>
                       </View>
+                    </View>
 
-                      {/* Net profit margin */}
+                    {/* Gross Profit Margin - Only shown if advanced options are used */}
+                    {hasAdvancedInputs && (
                       <View
                         style={[
                           styles.resultItem,
                           {
                             borderBottomColor: isDarkMode
-                              ? "rgba(60, 60, 60, 0.5)"
-                              : "rgba(230, 230, 230, 0.8)",
+                              ? "rgba(80, 80, 80, 0.5)"
+                              : "rgba(220, 220, 220, 0.8)",
                           },
                         ]}
                       >
@@ -936,23 +1305,23 @@ export default function HomeScreen() {
                           <Text
                             style={[
                               styles.resultLabel,
-                              { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                              { color: isDarkMode ? "#DDDDDD" : "#555555" },
                             ]}
                           >
-                            Net profit margin
+                            Gross profit margin
                           </Text>
                           <View
                             style={[
                               styles.badge,
                               {
                                 backgroundColor:
-                                  results.netProfitMargin >= 0
+                                  results.grossProfitMargin >= 0
                                     ? "rgba(76, 175, 80, 0.9)"
                                     : "rgba(244, 67, 54, 0.9)",
                               },
                             ]}
                           >
-                            <Text style={styles.badgeText}>NPM</Text>
+                            <Text style={styles.badgeText}>GPM</Text>
                           </View>
                         </View>
                         <View style={styles.resultValueRow}>
@@ -961,15 +1330,15 @@ export default function HomeScreen() {
                               styles.resultValueText,
                               {
                                 color:
-                                  results.netProfitMargin >= 0
+                                  results.grossProfitMargin >= 0
                                     ? "#4CAF50"
                                     : "#F44336",
                               },
                             ]}
                           >
-                            {results.netProfitMargin < 0 && "-"}
+                            {results.grossProfitMargin < 0 && "-"}
                             {formatPercentage(
-                              Math.abs(results.netProfitMargin)
+                              Math.abs(results.grossProfitMargin)
                             )}
                           </Text>
                           <View style={styles.trendContainer}>
@@ -978,13 +1347,13 @@ export default function HomeScreen() {
                                 styles.trendIndicator,
                                 {
                                   borderTopColor:
-                                    results.netProfitMargin >= 0
+                                    results.grossProfitMargin >= 0
                                       ? "#4CAF50"
                                       : "#F44336",
                                   transform: [
                                     {
                                       rotate:
-                                        results.netProfitMargin >= 0
+                                        results.grossProfitMargin >= 0
                                           ? "0deg"
                                           : "180deg",
                                     },
@@ -995,48 +1364,218 @@ export default function HomeScreen() {
                           </View>
                         </View>
                       </View>
+                    )}
 
-                      {/* Net profit */}
-                      <View style={styles.netProfitContainer}>
+                    {/* Total Expenses - Only shown if advanced options are used */}
+                    {hasAdvancedInputs && (
+                      <View
+                        style={[
+                          styles.resultItem,
+                          {
+                            borderBottomColor: isDarkMode
+                              ? "rgba(80, 80, 80, 0.5)"
+                              : "rgba(220, 220, 220, 0.8)",
+                          },
+                        ]}
+                      >
                         <View style={styles.resultLabelRow}>
                           <Text
                             style={[
-                              styles.netProfitLabel,
-                              { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                              styles.resultLabel,
+                              { color: isDarkMode ? "#DDDDDD" : "#555555" },
                             ]}
                           >
-                            Net profit
+                            Selling & operating expenses
                           </Text>
                           <View
                             style={[
                               styles.badge,
+                              { backgroundColor: "rgba(255, 152, 0, 0.9)" },
+                            ]}
+                          >
+                            <Text style={styles.badgeText}>EXP</Text>
+                          </View>
+                        </View>
+                        <View style={styles.resultValueRow}>
+                          <Text
+                            style={[
+                              styles.resultValueText,
+                              { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                            ]}
+                          >
+                            {formatCurrency(results.totalExpenses)}
+                          </Text>
+                          <View
+                            style={[
+                              styles.percentChip,
                               {
-                                backgroundColor:
-                                  results.netProfit >= 0
-                                    ? "rgba(76, 175, 80, 0.9)"
-                                    : "rgba(244, 67, 54, 0.9)",
+                                backgroundColor: isDarkMode
+                                  ? "rgba(35, 35, 35, 0.7)"
+                                  : "rgba(240, 240, 240, 0.7)",
+                                borderColor: isDarkMode
+                                  ? "rgba(80, 80, 80, 0.5)"
+                                  : "rgba(220, 220, 220, 0.8)",
                               },
                             ]}
                           >
-                            <Text style={styles.badgeText}>NP</Text>
+                            <Text
+                              style={[
+                                styles.percentText,
+                                { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                              ]}
+                            >
+                              {(
+                                (results.totalExpenses / results.revenue) *
+                                100
+                              ).toFixed(1)}
+                              %
+                            </Text>
                           </View>
                         </View>
+                      </View>
+                    )}
+
+                    {/* Net profit margin */}
+                    <View
+                      style={[
+                        styles.resultItem,
+                        {
+                          borderBottomColor: isDarkMode
+                            ? "rgba(80, 80, 80, 0.5)"
+                            : "rgba(220, 220, 220, 0.8)",
+                        },
+                      ]}
+                    >
+                      <View style={styles.resultLabelRow}>
+                        <Text
+                          style={[
+                            styles.resultLabel,
+                            { color: isDarkMode ? "#DDDDDD" : "#555555" },
+                          ]}
+                        >
+                          Net profit margin
+                        </Text>
                         <View
                           style={[
-                            styles.netProfitValueContainer,
+                            styles.badge,
+                            {
+                              backgroundColor:
+                                results.netProfitMargin >= 0
+                                  ? "rgba(76, 175, 80, 0.9)"
+                                  : "rgba(244, 67, 54, 0.9)",
+                            },
+                          ]}
+                        >
+                          <Text style={styles.badgeText}>NPM</Text>
+                        </View>
+                      </View>
+                      <View style={styles.resultValueRow}>
+                        <Text
+                          style={[
+                            styles.resultValueText,
+                            {
+                              color:
+                                results.netProfitMargin >= 0
+                                  ? "#4CAF50"
+                                  : "#F44336",
+                            },
+                          ]}
+                        >
+                          {results.netProfitMargin < 0 && "-"}
+                          {formatPercentage(Math.abs(results.netProfitMargin))}
+                        </Text>
+                        <View style={styles.trendContainer}>
+                          <View
+                            style={[
+                              styles.trendIndicator,
+                              {
+                                borderTopColor:
+                                  results.netProfitMargin >= 0
+                                    ? "#4CAF50"
+                                    : "#F44336",
+                                transform: [
+                                  {
+                                    rotate:
+                                      results.netProfitMargin >= 0
+                                        ? "0deg"
+                                        : "180deg",
+                                  },
+                                ],
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Net profit */}
+                    <View style={styles.netProfitContainer}>
+                      <View style={styles.resultLabelRow}>
+                        <Text
+                          style={[
+                            styles.netProfitLabel,
+                            { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                          ]}
+                        >
+                          Net profit
+                        </Text>
+                        <View
+                          style={[
+                            styles.badge,
+                            {
+                              backgroundColor:
+                                results.netProfit >= 0
+                                  ? "rgba(76, 175, 80, 0.9)"
+                                  : "rgba(244, 67, 54, 0.9)",
+                            },
+                          ]}
+                        >
+                          <Text style={styles.badgeText}>NP</Text>
+                        </View>
+                      </View>
+                      <View
+                        style={[
+                          styles.netProfitValueContainer,
+                          {
+                            backgroundColor: isDarkMode
+                              ? "rgba(35, 35, 35, 0.7)"
+                              : "rgba(248, 250, 252, 0.7)",
+                            borderColor: isDarkMode
+                              ? "rgba(80, 80, 80, 0.5)"
+                              : "rgba(220, 220, 220, 0.8)",
+                            borderRadius: 16,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.netProfitValueText,
+                            {
+                              color:
+                                results.netProfit >= 0 ? "#4CAF50" : "#F44336",
+                            },
+                          ]}
+                        >
+                          {results.netProfit < 0 && "-"}
+                          {formatCurrency(Math.abs(results.netProfit))}
+                        </Text>
+                        <View
+                          style={[
+                            styles.percentChip,
                             {
                               backgroundColor: isDarkMode
-                                ? "rgba(26, 26, 26, 0.8)"
-                                : "rgba(248, 248, 248, 0.8)",
+                                ? "rgba(35, 35, 35, 0.9)"
+                                : "rgba(240, 240, 240, 0.9)",
                               borderColor: isDarkMode
-                                ? "rgba(60, 60, 60, 0.5)"
-                                : "rgba(230, 230, 230, 0.8)",
+                                ? "rgba(80, 80, 80, 0.5)"
+                                : "rgba(220, 220, 220, 0.8)",
+                              borderRadius: 12,
                             },
                           ]}
                         >
                           <Text
                             style={[
-                              styles.netProfitValueText,
+                              styles.netProfitPercentage,
                               {
                                 color:
                                   results.netProfit >= 0
@@ -1045,172 +1584,149 @@ export default function HomeScreen() {
                               },
                             ]}
                           >
-                            {results.netProfit < 0 && "-"}
-                            {formatCurrency(Math.abs(results.netProfit))}
+                            {(
+                              (results.netProfit / results.revenue) *
+                              100
+                            ).toFixed(1)}
+                            %
                           </Text>
-                          <View
-                            style={[
-                              styles.percentChip,
-                              {
-                                backgroundColor: isDarkMode
-                                  ? "rgba(26, 26, 26, 0.5)"
-                                  : "rgba(234, 234, 234, 0.5)",
-                                borderColor: isDarkMode
-                                  ? "rgba(60, 60, 60, 0.5)"
-                                  : "rgba(230, 230, 230, 0.8)",
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.netProfitPercentage,
-                                {
-                                  color:
-                                    results.netProfit >= 0
-                                      ? "#4CAF50"
-                                      : "#F44336",
-                                },
-                              ]}
-                            >
-                              {(
-                                (results.netProfit / results.revenue) *
-                                100
-                              ).toFixed(1)}
-                              %
-                            </Text>
-                          </View>
                         </View>
                       </View>
+                    </View>
 
-                      {/* Additional metrics section */}
-                      <View style={styles.metricsContainer}>
-                        <Text
+                    {/* Additional metrics section */}
+                    <View style={styles.metricsContainer}>
+                      <Text
+                        style={[
+                          styles.metricsHeader,
+                          { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                        ]}
+                      >
+                        Key metrics
+                      </Text>
+
+                      <View style={styles.metricsGrid}>
+                        {/* ROI */}
+                        <View
                           style={[
-                            styles.metricsHeader,
-                            { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                            styles.metricCard,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "rgba(35, 35, 35, 0.7)"
+                                : "rgba(248, 250, 252, 0.7)",
+                              borderColor: isDarkMode
+                                ? "rgba(80, 80, 80, 0.5)"
+                                : "rgba(220, 220, 220, 0.8)",
+                              borderRadius: 16,
+                            },
                           ]}
                         >
-                          Key metrics
-                        </Text>
+                          <Text
+                            style={[
+                              styles.metricTitle,
+                              { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                            ]}
+                          >
+                            ROI
+                          </Text>
+                          <Text
+                            style={[
+                              styles.metricValue,
+                              {
+                                color: results.roi >= 0 ? "#4CAF50" : "#F44336",
+                              },
+                            ]}
+                          >
+                            {results.roi < 0 && "-"}
+                            {formatPercentage(Math.abs(results.roi))}
+                          </Text>
+                        </View>
 
-                        <View style={styles.metricsGrid}>
-                          {/* ROI */}
+                        {/* Investment */}
+                        <View
+                          style={[
+                            styles.metricCard,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "rgba(35, 35, 35, 0.7)"
+                                : "rgba(248, 250, 252, 0.7)",
+                              borderColor: isDarkMode
+                                ? "rgba(80, 80, 80, 0.5)"
+                                : "rgba(220, 220, 220, 0.8)",
+                              borderRadius: 16,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.metricTitle,
+                              { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                            ]}
+                          >
+                            Investment
+                          </Text>
+                          <Text
+                            style={[
+                              styles.metricValue,
+                              { color: isDarkMode ? "#FFFFFF" : "#212121" },
+                            ]}
+                          >
+                            {formatCurrency(results.investment)}
+                          </Text>
+                        </View>
+
+                        {/* Break-even units - Only shown if has operating expenses */}
+                        {results.breakEvenUnits > 0 && hasOperatingExpenses && (
                           <View
                             style={[
                               styles.metricCard,
                               {
                                 backgroundColor: isDarkMode
-                                  ? "rgba(26, 26, 26, 0.8)"
-                                  : "rgba(248, 248, 248, 0.8)",
+                                  ? "rgba(35, 35, 35, 0.7)"
+                                  : "rgba(248, 250, 252, 0.7)",
                                 borderColor: isDarkMode
-                                  ? "rgba(60, 60, 60, 0.5)"
-                                  : "rgba(230, 230, 230, 0.8)",
+                                  ? "rgba(80, 80, 80, 0.5)"
+                                  : "rgba(220, 220, 220, 0.8)",
+                                borderRadius: 16,
+                                width: "100%",
+                                marginTop: 8,
                               },
                             ]}
                           >
                             <Text
                               style={[
                                 styles.metricTitle,
-                                { color: isDarkMode ? "#BBBBBB" : "#757575" },
+                                {
+                                  color: isDarkMode ? "#BBBBBB" : "#757575",
+                                },
                               ]}
                             >
-                              ROI
+                              Break-even point
                             </Text>
                             <Text
                               style={[
                                 styles.metricValue,
                                 {
-                                  color:
-                                    results.roi >= 0 ? "#4CAF50" : "#F44336",
+                                  color: isDarkMode ? "#FFFFFF" : "#212121",
                                 },
                               ]}
                             >
-                              {results.roi < 0 && "-"}
-                              {formatPercentage(Math.abs(results.roi))}
+                              {results.breakEvenUnits} units
                             </Text>
                           </View>
-
-                          {/* Investment */}
-                          <View
-                            style={[
-                              styles.metricCard,
-                              {
-                                backgroundColor: isDarkMode
-                                  ? "rgba(26, 26, 26, 0.8)"
-                                  : "rgba(248, 248, 248, 0.8)",
-                                borderColor: isDarkMode
-                                  ? "rgba(60, 60, 60, 0.5)"
-                                  : "rgba(230, 230, 230, 0.8)",
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.metricTitle,
-                                { color: isDarkMode ? "#BBBBBB" : "#757575" },
-                              ]}
-                            >
-                              Investment
-                            </Text>
-                            <Text
-                              style={[
-                                styles.metricValue,
-                                { color: isDarkMode ? "#FFFFFF" : "#212121" },
-                              ]}
-                            >
-                              {formatCurrency(results.investment)}
-                            </Text>
-                          </View>
-
-                          {/* Break-even units - Only shown if has operating expenses */}
-                          {results.breakEvenUnits > 0 &&
-                            hasOperatingExpenses && (
-                              <View
-                                style={[
-                                  styles.metricCard,
-                                  {
-                                    backgroundColor: isDarkMode
-                                      ? "rgba(26, 26, 26, 0.8)"
-                                      : "rgba(248, 248, 248, 0.8)",
-                                    borderColor: isDarkMode
-                                      ? "rgba(60, 60, 60, 0.5)"
-                                      : "rgba(230, 230, 230, 0.8)",
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.metricTitle,
-                                    {
-                                      color: isDarkMode ? "#BBBBBB" : "#757575",
-                                    },
-                                  ]}
-                                >
-                                  Break-even
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.metricValue,
-                                    {
-                                      color: isDarkMode ? "#FFFFFF" : "#212121",
-                                    },
-                                  ]}
-                                >
-                                  {results.breakEvenUnits} units
-                                </Text>
-                              </View>
-                            )}
-                        </View>
+                        )}
                       </View>
-                    </LinearGradient>
-                  </View>
-                )}
-              </LinearGradient>
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                    </View>
+                  </LinearGradient>
+                </View>
+              )}
+            </LinearGradient>
+          </View>
+        ) : (
+          renderEmptyState()
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -1226,23 +1742,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 25,
-    paddingTop: 16,
+    height: 100,
     paddingBottom: 16,
-    borderBottomWidth: 1, 
+    borderBottomWidth: 1,
+    elevation: 3,
+  },
+  headerGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 25,
+    paddingTop: 13,
   },
   headerLeft: {
     flexDirection: "column",
+    paddingTop: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 16,
     opacity: 0.8,
+    letterSpacing: 0.3,
   },
   headerActions: {
     flexDirection: "row",
+    paddingTop: 16,
+  },
+  headerIcon: {
+    marginLeft: 8,
   },
   scrollView: {
     flex: 1,
@@ -1253,47 +1789,37 @@ const styles = StyleSheet.create({
   },
   mainCard: {
     backgroundColor: "white",
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: 16,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
   },
   resultsCard: {
     padding: 0,
     marginTop: 8,
-    borderWidth: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 1,
     overflow: "hidden",
   },
   resultsGradientOverlay: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
-    padding: 12,
+    padding: 16,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
-    paddingHorizontal: 8,
-    paddingTop: 8,
+    paddingHorizontal: 4,
   },
   titleContainer: {
     position: "relative",
-    paddingLeft: 0,
+    paddingLeft: 12,
   },
   titleAccent: {
     position: "absolute",
     left: 0,
-    top: -5,
+    top: -4,
     width: 4,
     height: "80%",
     borderRadius: 4,
@@ -1308,7 +1834,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   inputSection: {
-    marginBottom: 1,
+    marginBottom: 8,
   },
   inputRow: {
     flexDirection: "row",
@@ -1320,49 +1846,74 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#757575",
     marginBottom: 8,
+    letterSpacing: 0.3,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 12,
+    height: 50,
   },
   currencySymbol: {
     fontSize: 16,
-    color: "#757575",
     paddingRight: 8,
   },
   percentSymbol: {
     fontSize: 16,
-    color: "#757575",
     paddingLeft: 8,
   },
   input: {
     flex: 1,
     fontSize: 16,
     paddingVertical: 12,
-    color: "#212121",
   },
   quantityButtons: {
     flexDirection: "row",
+  },
+  unitButton: {
+    margin: 0,
+  },
+  advancedToggleContainer: {
+    borderRadius: 12,
+    marginBottom: 16,
+    marginTop: 8,
+    borderWidth: 1,
   },
   advancedToggle: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    marginBottom: 5,
+    paddingVertical: 4,
   },
   advancedToggleText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#757575",
+    letterSpacing: 0.5,
   },
   advancedSection: {
     marginTop: 8,
+    marginBottom: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  resetButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  resetButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
   resultsSection: {
     marginTop: 8,
@@ -1379,14 +1930,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-  resultRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
   resultLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1396,9 +1939,9 @@ const styles = StyleSheet.create({
   resultLabel: {
     fontSize: 15,
     fontWeight: "500",
+    letterSpacing: 0.3,
   },
   badge: {
-    backgroundColor: "#607D8B",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1417,75 +1960,30 @@ const styles = StyleSheet.create({
   divider: {
     marginVertical: 16,
   },
-  additionalMetricsLabel: {
-    fontSize: 14,
-    color: "#757575",
-    marginBottom: 8,
-  },
   chartView: {
     width: "100%",
     marginTop: 8,
   },
   chartCard: {
     marginBottom: 12,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
-    padding: 0,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
   },
   chartTitle: {
     fontSize: 18,
     fontWeight: "500",
     marginBottom: 16,
   },
-  donutChartContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  legendContainer: {
-    width: "100%",
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  legendText: {
-    fontSize: 14,
-    color: "#757575",
-  },
-  simpleChartContainer: {
-    alignItems: "center",
-    paddingVertical: 16,
-  },
-  simpleDonut: {
-    flexDirection: "row",
-    height: 30,
-    width: "100%",
-    borderRadius: 15,
-    overflow: "hidden",
-    marginVertical: 20,
-  },
-  donutSegment: {
-    height: "100%",
-  },
   resultsContainer: {
-    marginTop: 0,
+    marginTop: 8,
     borderRadius: 12,
     overflow: "hidden",
   },
   resultCardGradient: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     overflow: "hidden",
     borderWidth: 1,
   },
@@ -1506,26 +2004,25 @@ const styles = StyleSheet.create({
   percentText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#757575",
   },
   netProfitContainer: {
-    marginBottom: 1,
+    marginBottom: 16,
   },
   netProfitLabel: {
     fontSize: 18,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
   netProfitValueContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 5,
+    padding: 16,
+    marginTop: 8,
     borderWidth: 1,
   },
   netProfitValueText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "700",
   },
   netProfitPercentage: {
@@ -1551,12 +2048,13 @@ const styles = StyleSheet.create({
     borderTopColor: "#4CAF50",
   },
   metricsContainer: {
-    marginTop: 12,
+    marginTop: 16,
   },
   metricsHeader: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 16,
+    letterSpacing: 0.3,
   },
   metricsGrid: {
     flexDirection: "row",
@@ -1566,13 +2064,13 @@ const styles = StyleSheet.create({
   metricCard: {
     width: "48%",
     marginBottom: 16,
-    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
   },
   metricTitle: {
     fontSize: 14,
     marginBottom: 8,
+    letterSpacing: 0.3,
   },
   metricValue: {
     fontSize: 20,
@@ -1586,6 +2084,54 @@ const styles = StyleSheet.create({
   actionButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(200, 200, 200, 0.3)",
+  },
+  emptyStateCard: {
+    padding: 0,
+    marginTop: 8,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  emptyStateGradient: {
+    borderRadius: 20,
+    overflow: "hidden",
+    padding: 24,
+    alignItems: "center",
+  },
+  emptyStateIconContainer: {
+    marginBottom: 16,
+    backgroundColor: "rgba(33, 150, 243, 0.1)",
+    borderRadius: 50,
+    padding: 10,
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  emptyStateTipsContainer: {
+    width: "100%",
+    marginTop: 8,
+  },
+  emptyStateTipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  emptyStateTipBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  emptyStateTipText: {
+    fontSize: 15,
+    lineHeight: 22,
   },
 });

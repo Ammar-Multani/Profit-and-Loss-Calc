@@ -228,12 +228,7 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: isDarkMode ? "#252525" : "#FFFFFF" },
-      ]}
-    >
+    <View style={[styles.container, ,]}>
       <Text
         style={[styles.title, { color: isDarkMode ? "#90CAF9" : "#2196F3" }]}
       >
@@ -266,7 +261,7 @@ const CircularProgressDisplay: React.FC<CircularProgressDisplayProps> = ({
             y={centerY}
             fontSize={28}
             fontWeight="bold"
-            fill="white"
+            fill={isDarkMode ? "#FFFFFF" : "#333333"}
             textAnchor="middle"
             alignmentBaseline="middle"
           >

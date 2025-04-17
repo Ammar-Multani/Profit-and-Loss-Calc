@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import LinearGradient from "react-native-linear-gradient";
 
 import {
   resetSettings,
@@ -29,7 +30,7 @@ import {
 import { useTheme } from "../context/ThemeContext";
 
 export default function SettingsScreen() {
-  const { colors, themeMode, setThemeMode } = useTheme();
+  const { colors, themeMode, setThemeMode, isDarkMode } = useTheme();
   const navigation = useNavigation();
 
   const [appearanceDialogVisible, setAppearanceDialogVisible] = useState(false);
@@ -181,12 +182,29 @@ export default function SettingsScreen() {
 
   const renderSettingItem = (icon, title, onPress, showChevron = true) => (
     <TouchableOpacity
-      style={[styles.settingItem, { borderBottomColor: colors.borderLight }]}
+      style={[
+        styles.settingItem,
+        {
+          borderBottomColor: isDarkMode
+            ? "rgba(80, 80, 80, 0.5)"
+            : "rgba(220, 220, 220, 0.8)",
+          borderBottomWidth: 1,
+        },
+      ]}
       onPress={onPress}
     >
       <View style={styles.settingItemLeft}>
-        <IconButton icon={icon} size={24} iconColor={colors.icon} />
-        <Text style={[styles.settingItemText, { color: colors.text }]}>
+        <IconButton
+          icon={icon}
+          size={24}
+          iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+        />
+        <Text
+          style={[
+            styles.settingItemText,
+            { color: isDarkMode ? "#FFFFFF" : "#212121" },
+          ]}
+        >
           {title}
         </Text>
       </View>
@@ -194,119 +212,256 @@ export default function SettingsScreen() {
         <IconButton
           icon="chevron-right"
           size={24}
-          iconColor={colors.placeholder}
+          iconColor={isDarkMode ? "#AAAAAA" : "#757575"}
         />
       )}
     </TouchableOpacity>
   );
 
+  const renderSection = (title, children) => (
+    <>
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: isDarkMode ? "#AAAAAA" : "#757575" },
+        ]}
+      >
+        {title}
+      </Text>
+      <View
+        style={[
+          styles.section,
+          {
+            backgroundColor: isDarkMode ? "#1E1E1E" : "white",
+            borderColor: isDarkMode
+              ? "rgba(80, 80, 80, 0.5)"
+              : "rgba(220, 220, 220, 0.8)",
+            borderWidth: 1,
+            borderRadius: 20,
+            marginBottom: 16,
+            overflow: "hidden",
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={
+            isDarkMode
+              ? ["rgba(40, 40, 40, 0.7)", "rgba(30, 30, 30, 0.5)"]
+              : ["rgba(255, 255, 255, 0.95)", "rgba(250, 250, 255, 0.85)"]
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.sectionGradient}
+        >
+          {children}
+        </LinearGradient>
+      </View>
+    </>
+  );
+
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: isDarkMode ? "#121212" : "#F8F9FA" },
+      ]}
     >
       <View
         style={[
           styles.header,
           {
-            backgroundColor: colors.surface,
-            borderBottomColor: colors.border,
+            backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+            borderBottomColor: isDarkMode
+              ? "rgba(75, 75, 75, 0.3)"
+              : "rgba(230, 230, 230, 0.8)",
+            borderBottomWidth: 1,
           },
         ]}
       >
-        <IconButton
-          icon="close"
-          size={24}
-          iconColor={colors.icon}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>
-          APPLICATION SETTINGS
-        </Text>
-        <View style={{ width: 40 }} />
+        <LinearGradient
+          colors={
+            isDarkMode
+              ? ["rgba(40, 40, 40, 0.8)", "rgba(30, 30, 30, 0.8)"]
+              : ["rgba(255, 255, 255, 1)", "rgba(250, 250, 250, 0.95)"]
+          }
+          style={styles.headerGradient}
+        >
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          />
+          <View style={styles.headerTitleContainer}>
+            <Text
+              style={[
+                styles.headerTitle,
+                { color: isDarkMode ? "#FFFFFF" : "#333333" },
+              ]}
+            >
+              SETTINGS
+            </Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </LinearGradient>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-          APPEARANCE & LANGUAGE
-        </Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {renderSettingItem("palette", "Appearance", () =>
-            setAppearanceDialogVisible(true)
-          )}
-          {renderSettingItem("translate", "Language", () =>
-            setLanguageDialogVisible(true)
-          )}
-          {renderSettingItem("calculator", "Calculator", () =>
-            setCalculatorDialogVisible(true)
-          )}
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {renderSection(
+          "APPEARANCE",
+          <>
+            {renderSettingItem("palette", "Appearance", () =>
+              setAppearanceDialogVisible(true)
+            )}
+            {/* {renderSettingItem("translate", "Language", () =>
+              setLanguageDialogVisible(true)
+            )}
+            {renderSettingItem("calculator", "Calculator", () =>
+              setCalculatorDialogVisible(true)
+            )} */}
+          </>
+        )}
+
+        {renderSection(
+          "LEGAL",
+          <>
+            {renderSettingItem(
+              "file-document-outline",
+              "Terms of service",
+              () => handleOpenLink("https://example.com/terms")
+            )}
+            {renderSettingItem("alert-circle-outline", "Disclaimer", () =>
+              handleOpenLink("https://example.com/disclaimer")
+            )}
+          </>
+        )}
+
+        {renderSection(
+          "PRIVACY",
+          <>
+            {renderSettingItem("shield-account", "Privacy policy", () =>
+              handleOpenLink("https://example.com/privacy")
+            )}
+          </>
+        )}
+
+        {renderSection(
+          "PROFIT AND LOSS CALCULATOR",
+          <>
+            {renderSettingItem("book-open-variant", "Manual", () =>
+              handleOpenLink("https://example.com/manual")
+            )}
+            {renderSettingItem(
+              "share-variant",
+              "Share this app",
+              handleShareApp,
+              false
+            )}
+            {renderSettingItem("thumb-up", "Rate us", handleRateApp, false)}
+          </>
+        )}
+
+        {renderSection(
+          "CUSTOMER SERVICE",
+          <>{renderSettingItem("bug", "Report a bug", handleSubmitBugReport)}</>
+        )}
+
+        <View style={styles.dangerSection}>
+          <LinearGradient
+            colors={
+              isDarkMode
+                ? ["rgba(40, 40, 40, 0.7)", "rgba(30, 30, 30, 0.5)"]
+                : ["rgba(255, 255, 255, 0.95)", "rgba(250, 250, 255, 0.85)"]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.dangerSectionGradient,
+              {
+                borderColor: isDarkMode
+                  ? "rgba(75, 75, 75, 0.2)"
+                  : "rgba(230, 230, 230, 0.8)",
+                borderWidth: 1,
+                borderRadius: 20,
+              },
+            ]}
+          >
+            {/* <TouchableOpacity
+              style={[
+                styles.dangerButton,
+                {
+                  borderBottomColor: isDarkMode
+                    ? "rgba(80, 80, 80, 0.5)"
+                    : "rgba(220, 220, 220, 0.8)",
+                  borderBottomWidth: 1,
+                },
+              ]}
+              onPress={handleResetSettings}
+            >
+              <View style={styles.dangerButtonContent}>
+                <IconButton icon="refresh" size={24} iconColor="#F44336" />
+                <Text style={[styles.dangerButtonText, { color: "#F44336" }]}>
+                  Reset Settings
+                </Text>
+              </View>
+              <IconButton
+                icon="chevron-right"
+                size={24}
+                iconColor={isDarkMode ? "#AAAAAA" : "#757575"}
+              />
+            </TouchableOpacity> */}
+
+            <TouchableOpacity
+              style={styles.dangerButton}
+              onPress={handleClearHistory}
+            >
+              <View style={styles.dangerButtonContent}>
+                <IconButton icon="delete" size={24} iconColor="#F44336" />
+                <Text style={[styles.dangerButtonText, { color: "#F44336" }]}>
+                  Erase All Content
+                </Text>
+              </View>
+              <IconButton
+                icon="chevron-right"
+                size={24}
+                iconColor={isDarkMode ? "#AAAAAA" : "#757575"}
+              />
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-          LEGAL
-        </Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {renderSettingItem("file-document-outline", "Terms of service", () =>
-            handleOpenLink("https://example.com/terms")
-          )}
-          {renderSettingItem("alert-circle-outline", "Disclaimer", () =>
-            handleOpenLink("https://example.com/disclaimer")
-          )}
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-          PRIVACY
-        </Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {renderSettingItem("shield-account", "Privacy policy", () =>
-            handleOpenLink("https://example.com/privacy")
-          )}
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-          PROFIT AND LOSS CALCULATOR
-        </Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {renderSettingItem("book-open-variant", "Manual", () =>
-            handleOpenLink("https://example.com/manual")
-          )}
-          {renderSettingItem(
-            "share-variant",
-            "Share this app",
-            handleShareApp,
-            false
-          )}
-          {renderSettingItem("thumb-up", "Rate us", handleRateApp, false)}
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-          CUSTOMER SERVICE
-        </Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {renderSettingItem("bug", "Report a bug", handleSubmitBugReport)}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.resetButton, { borderTopColor: colors.border }]}
-          onPress={handleResetSettings}
-        >
-          <Text style={[styles.resetButtonText, { color: colors.error }]}>
-            Reset Settings
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.resetButton, { borderTopColor: colors.border }]}
-          onPress={handleClearHistory}
-        >
-          <Text style={[styles.resetButtonText, { color: colors.error }]}>
-            Erase All Content
-          </Text>
-        </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Version 1.0.0
-          </Text>
+          <LinearGradient
+            colors={
+              isDarkMode
+                ? ["rgba(40, 40, 40, 0.5)", "rgba(30, 30, 30, 0.3)"]
+                : ["rgba(247, 247, 247, 0.5)", "rgba(255, 255, 255, 0.3)"]
+            }
+            style={[
+              styles.versionContainer,
+              {
+                borderColor: isDarkMode
+                  ? "rgba(75, 75, 75, 0.2)"
+                  : "rgba(230, 230, 230, 0.8)",
+                borderWidth: 1,
+                borderRadius: 16,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.footerText,
+                { color: isDarkMode ? "#AAAAAA" : "#9E9E9E" },
+              ]}
+            >
+              Version 1.0.0
+            </Text>
+          </LinearGradient>
         </View>
       </ScrollView>
 
@@ -314,9 +469,11 @@ export default function SettingsScreen() {
         <Dialog
           visible={appearanceDialogVisible}
           onDismiss={() => setAppearanceDialogVisible(false)}
-          style={{ backgroundColor: colors.surface }}
+          style={{ backgroundColor: isDarkMode ? "#1E1E1E" : colors.surface }}
         >
-          <Dialog.Title style={{ color: colors.text }}>Appearance</Dialog.Title>
+          <Dialog.Title style={{ color: isDarkMode ? "#FFFFFF" : colors.text }}>
+            Appearance
+          </Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group
               onValueChange={handleThemeChange}
@@ -325,23 +482,28 @@ export default function SettingsScreen() {
               <RadioButton.Item
                 label="Light"
                 value="light"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="Dark"
                 value="dark"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="System"
                 value="system"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
             <TouchableOpacity onPress={() => setAppearanceDialogVisible(false)}>
-              <Text style={[styles.dialogButton, { color: colors.primary }]}>
+              <Text
+                style={[
+                  styles.dialogButton,
+                  { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              >
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -353,9 +515,11 @@ export default function SettingsScreen() {
         <Dialog
           visible={languageDialogVisible}
           onDismiss={() => setLanguageDialogVisible(false)}
-          style={{ backgroundColor: colors.surface }}
+          style={{ backgroundColor: isDarkMode ? "#1E1E1E" : colors.surface }}
         >
-          <Dialog.Title style={{ color: colors.text }}>Language</Dialog.Title>
+          <Dialog.Title style={{ color: isDarkMode ? "#FFFFFF" : colors.text }}>
+            Language
+          </Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group
               onValueChange={handleLanguageChange}
@@ -364,33 +528,38 @@ export default function SettingsScreen() {
               <RadioButton.Item
                 label="English"
                 value="english"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="Spanish"
                 value="spanish"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="French"
                 value="french"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="German"
                 value="german"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="Chinese"
                 value="chinese"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
             <TouchableOpacity onPress={() => setLanguageDialogVisible(false)}>
-              <Text style={[styles.dialogButton, { color: colors.primary }]}>
+              <Text
+                style={[
+                  styles.dialogButton,
+                  { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              >
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -402,9 +571,9 @@ export default function SettingsScreen() {
         <Dialog
           visible={calculatorDialogVisible}
           onDismiss={() => setCalculatorDialogVisible(false)}
-          style={{ backgroundColor: colors.surface }}
+          style={{ backgroundColor: isDarkMode ? "#1E1E1E" : colors.surface }}
         >
-          <Dialog.Title style={{ color: colors.text }}>
+          <Dialog.Title style={{ color: isDarkMode ? "#FFFFFF" : colors.text }}>
             Calculator Mode
           </Dialog.Title>
           <Dialog.Content>
@@ -415,30 +584,35 @@ export default function SettingsScreen() {
               <RadioButton.Item
                 label="Standard"
                 value="standard"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="Advanced"
                 value="advanced"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
               <RadioButton.Item
                 label="Professional"
                 value="professional"
-                labelStyle={{ color: colors.text }}
+                labelStyle={{ color: isDarkMode ? "#FFFFFF" : colors.text }}
               />
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions>
             <TouchableOpacity onPress={() => setCalculatorDialogVisible(false)}>
-              <Text style={[styles.dialogButton, { color: colors.primary }]}>
+              <Text
+                style={[
+                  styles.dialogButton,
+                  { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              >
                 Cancel
               </Text>
             </TouchableOpacity>
           </Dialog.Actions>
         </Dialog>
       </Portal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -450,40 +624,64 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    backgroundColor: "white",
+    paddingHorizontal: 25,
+    height: 100,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    elevation: 3,
+  },
+  headerGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingTop: 16,
+  },
+  backButton: {
+    margin: 0,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#757575",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   scrollView: {
     flex: 1,
   },
-  section: {
-    backgroundColor: "white",
-    marginBottom: 16,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#757575",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.5,
     marginTop: 16,
     marginBottom: 8,
-    marginLeft: 16,
+    marginLeft: 8,
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionGradient: {
+    borderRadius: 20,
+    overflow: "hidden",
   },
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    paddingHorizontal: 8,
   },
   settingItemLeft: {
     flexDirection: "row",
@@ -491,30 +689,44 @@ const styles = StyleSheet.create({
   },
   settingItemText: {
     fontSize: 16,
-    color: "#212121",
+    fontWeight: "500",
     marginLeft: 8,
   },
-  resetButton: {
-    alignItems: "center",
-    paddingVertical: 16,
-    marginTop: 24,
-    marginBottom: 16,
+  dangerSection: {
+    marginTop: 20,
+    marginBottom: 20,
   },
-  resetButtonText: {
+  dangerSectionGradient: {
+    overflow: "hidden",
+  },
+  dangerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  dangerButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dangerButtonText: {
     fontSize: 16,
-    color: "#F44336",
+    fontWeight: "500",
   },
   footer: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 30,
+  },
+  versionContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   footerText: {
     fontSize: 12,
-    color: "#9E9E9E",
-    marginTop: 4,
+    fontWeight: "500",
   },
   dialogButton: {
-    color: "#2196F3",
     fontSize: 16,
     fontWeight: "500",
     padding: 8,
