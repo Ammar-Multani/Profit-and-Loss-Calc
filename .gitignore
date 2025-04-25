@@ -44,4 +44,8 @@ android/
 # ios
 ios/
 
+# credentials
+credentials/android/*.jks
+credentials/android/*.json
+
 
