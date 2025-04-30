@@ -76,6 +76,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
   const [isReady, setIsReady] = useState(false);
 
+  // This ensures isDarkMode reflects system theme immediately, even before preferences load
+  const calculatedIsDarkMode =
+    themeMode === "dark" ||
+    (themeMode === "system" && systemColorScheme === "dark");
+
   useEffect(() => {
     // Load saved theme preference
     const loadThemePreference = async () => {
@@ -94,6 +99,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     loadThemePreference();
   }, []);
 
+  // Add effect to update theme if system theme changes
+  useEffect(() => {
+    if (themeMode === "system") {
+      // Force update when system theme changes while app is running
+      // This creates a new context value that will propagate to consumers
+      updateThemeMode("system");
+    }
+  }, [systemColorScheme]);
+
   const updateThemeMode = async (mode: ThemeMode) => {
     setThemeMode(mode);
     try {
@@ -103,10 +117,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const isDarkMode =
-    themeMode === "dark" ||
-    (themeMode === "system" && systemColorScheme === "dark");
-
+  const isDarkMode = calculatedIsDarkMode;
   const theme = isDarkMode ? CustomDarkTheme : CustomLightTheme;
 
   // Extended colors for easier access in components

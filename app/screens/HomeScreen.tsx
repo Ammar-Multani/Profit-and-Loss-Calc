@@ -7,6 +7,10 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Alert,
+  ToastAndroid,
+  Modal,
 } from "react-native";
 import { Text, IconButton, Divider, Button, Card } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +19,7 @@ import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LinearGradient from "react-native-linear-gradient";
 import ViewShot from "react-native-view-shot";
+import { MaterialIcons } from "@expo/vector-icons";
 
 import { calculateResults } from "../utils/calculations";
 import { saveCalculation, getSettings } from "../utils/storage";
@@ -42,7 +47,7 @@ interface ResultsType {
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, themeMode, setThemeMode } = useTheme();
 
   const [buyingPrice, setBuyingPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
@@ -57,6 +62,8 @@ export default function HomeScreen() {
   const [calculatorMode, setCalculatorMode] = useState("standard");
   const [results, setResults] = useState<ResultsType | null>(null);
   const [showChart, setShowChart] = useState(false);
+
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
 
   useEffect(() => {
     const loadCalculatorMode = async () => {
@@ -160,6 +167,9 @@ export default function HomeScreen() {
 
     saveCalculation(calculation);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Show success message
+    ToastAndroid.show("Saved to History", ToastAndroid.SHORT);
   };
 
   const formatCurrency = (value: number): string => {
@@ -361,6 +371,204 @@ export default function HomeScreen() {
     }
   };
 
+  // Add theme toggle handler
+  const handleThemeToggle = () => {
+    const newTheme = isDarkMode ? "light" : "dark";
+    setThemeMode(newTheme);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // Toggle info modal
+  const toggleInfoModal = () => {
+    setInfoModalVisible(!infoModalVisible);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // Info modal component
+  const renderInfoModal = () => {
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={infoModalVisible}
+        onRequestClose={() => {
+          setInfoModalVisible(false);
+        }}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: isDarkMode ? "#1E1E1E" : "white",
+                borderColor: isDarkMode
+                  ? "rgba(75, 75, 75, 0.2)"
+                  : "rgba(230, 230, 230, 0.8)",
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                ]}
+              >
+                Calculator Help
+              </Text>
+              <IconButton
+                icon="close"
+                size={24}
+                iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+                onPress={() => setInfoModalVisible(false)}
+              />
+            </View>
+
+            <ScrollView style={styles.modalScrollView}>
+              <View style={styles.helpSection}>
+                <View style={styles.helpSectionHeader}>
+                  <MaterialIcons
+                    name="info"
+                    size={22}
+                    color={isDarkMode ? "#90CAF9" : "#2196F3"}
+                  />
+                  <Text
+                    style={[
+                      styles.helpSectionTitle,
+                      { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                    ]}
+                  >
+                    Basic Inputs
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.helpText,
+                    { color: isDarkMode ? "#BBBBBB" : "#666666" },
+                  ]}
+                >
+                  • Enter the buying price and selling price per unit{"\n"}•
+                  Specify the number of units you expect to sell{"\n"}• Results
+                  will calculate automatically as you type
+                </Text>
+              </View>
+
+              <View style={styles.helpSection}>
+                <View style={styles.helpSectionHeader}>
+                  <MaterialIcons
+                    name="settings"
+                    size={22}
+                    color={isDarkMode ? "#90CAF9" : "#2196F3"}
+                  />
+                  <Text
+                    style={[
+                      styles.helpSectionTitle,
+                      { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                    ]}
+                  >
+                    Advanced Options
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.helpText,
+                    { color: isDarkMode ? "#BBBBBB" : "#666666" },
+                  ]}
+                >
+                  • Operating expenses: Fixed costs for the entire operation
+                  {"\n"}• Buying expenses: Additional costs per unit when
+                  purchasing{"\n"}• Selling expenses: Additional costs per unit
+                  when selling{"\n"}• Tax rate: Percentage of profit that goes
+                  to taxes
+                </Text>
+              </View>
+
+              <View style={styles.helpSection}>
+                <View style={styles.helpSectionHeader}>
+                  <MaterialIcons
+                    name="calculate"
+                    size={22}
+                    color={isDarkMode ? "#90CAF9" : "#2196F3"}
+                  />
+                  <Text
+                    style={[
+                      styles.helpSectionTitle,
+                      { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                    ]}
+                  >
+                    Results
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.helpText,
+                    { color: isDarkMode ? "#BBBBBB" : "#666666" },
+                  ]}
+                >
+                  • Gross Profit: Revenue minus cost of goods sold{"\n"}• Net
+                  Profit: Profit after all expenses and taxes{"\n"}• ROI: Return
+                  on investment percentage{"\n"}• View charts to visualize cost
+                  breakdown
+                </Text>
+              </View>
+
+              <View style={styles.helpSection}>
+                <View style={styles.helpSectionHeader}>
+                  <MaterialIcons
+                    name="save"
+                    size={22}
+                    color={isDarkMode ? "#90CAF9" : "#2196F3"}
+                  />
+                  <Text
+                    style={[
+                      styles.helpSectionTitle,
+                      { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                    ]}
+                  >
+                    Save & Export
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.helpText,
+                    { color: isDarkMode ? "#BBBBBB" : "#666666" },
+                  ]}
+                >
+                  • Save calculations to history for future reference{"\n"}•
+                  Export results as PDF for sharing{"\n"}• View detailed charts
+                  of cost breakdown
+                </Text>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.closeModalButton,
+                {
+                  backgroundColor: isDarkMode ? "#333333" : "#f0f0f0",
+                  borderColor: isDarkMode
+                    ? "rgba(75, 75, 75, 0.2)"
+                    : "rgba(230, 230, 230, 0.8)",
+                },
+              ]}
+              onPress={() => setInfoModalVisible(false)}
+            >
+              <Text
+                style={[
+                  styles.closeModalButtonText,
+                  { color: isDarkMode ? "#90CAF9" : "#2196F3" },
+                ]}
+              >
+                CLOSE
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View
       style={[
@@ -388,22 +596,19 @@ export default function HomeScreen() {
           style={styles.headerGradient}
         >
           <View style={styles.headerLeft}>
-            <Text
-              style={[
-                styles.headerTitle,
-                { color: isDarkMode ? "#FFFFFF" : "#333333" },
-              ]}
-            >
-              Profit & Loss
-            </Text>
-            <Text
-              style={[
-                styles.headerSubtitle,
-                { color: isDarkMode ? "#AAAAAA" : "#757575" },
-              ]}
-            >
-              Calculator
-            </Text>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoImageContainer}>
+                <Image
+                  source={
+                    isDarkMode
+                      ? require("../../assets/adaptive-icon-dark.png")
+                      : require("../../assets/adaptive-icon-light.png")
+                  }
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
           </View>
           <View style={styles.headerActions}>
             <IconButton
@@ -413,6 +618,20 @@ export default function HomeScreen() {
               style={styles.headerIcon}
               onPress={() => navigation.navigate("History" as never)}
             />
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleThemeToggle}
+              hitSlop={{ top: 10, bottom: 12, left: 12, right: 12 }}
+            >
+              <View style={styles.iconButtonInner}>
+                <MaterialIcons
+                  name={isDarkMode ? "light-mode" : "dark-mode"}
+                  size={24}
+                  color={isDarkMode ? "#90CAF9" : "#2196F3"}
+                />
+              </View>
+            </TouchableOpacity>
+
             <IconButton
               icon="cog"
               size={24}
@@ -423,6 +642,8 @@ export default function HomeScreen() {
           </View>
         </LinearGradient>
       </View>
+
+      {renderInfoModal()}
 
       <ScrollView
         style={styles.scrollView}
@@ -459,6 +680,26 @@ export default function HomeScreen() {
               </Text>
             </View>
             <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.infoButton,
+                  {
+                    backgroundColor: isDarkMode
+                      ? "rgba(50, 50, 50, 0.7)"
+                      : "rgba(255, 255, 255, 0.88)",
+                    borderColor: isDarkMode
+                      ? "rgba(70, 70, 70, 0.5)"
+                      : "rgba(210, 210, 210, 0.8)",
+                  },
+                ]}
+                onPress={toggleInfoModal}
+              >
+                <MaterialIcons
+                  name="help-outline"
+                  size={18}
+                  color={isDarkMode ? "#BBBBBB" : "#616161"}
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.resetButton,
@@ -1742,7 +1983,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 25,
-    height: 100,
+    height: 95,
     paddingBottom: 16,
     borderBottomWidth: 1,
     elevation: 3,
@@ -1776,6 +2017,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     paddingTop: 16,
+    left: 15,
   },
   headerIcon: {
     marginLeft: 8,
@@ -2133,5 +2375,96 @@ const styles = StyleSheet.create({
   emptyStateTipText: {
     fontSize: 15,
     lineHeight: 22,
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoImageContainer: {
+    width: 98,
+    height: 58,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  logoImage: {
+    width: 192,
+    height: 192,
+  },
+  iconButton: {
+    width: 30,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 0,
+    paddingTop: 2,
+  },
+  iconButtonInner: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "90%",
+    maxHeight: "80%",
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  modalScrollView: {
+    padding: 16,
+  },
+  helpSection: {
+    marginBottom: 20,
+  },
+  helpSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  helpSectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  helpText: {
+    fontSize: 15,
+    lineHeight: 22,
+    paddingLeft: 30,
+  },
+  closeModalButton: {
+    padding: 14,
+    alignItems: "center",
+    borderTopWidth: 1,
+  },
+  closeModalButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

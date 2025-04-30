@@ -11,17 +11,42 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as NavigationBar from "expo-navigation-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import HomeScreen from "./app/screens/HomeScreen";
 import SettingsScreen from "./app/screens/SettingsScreen";
 import HistoryScreen from "./app/screens/HistoryScreen";
+import CurrencySelectorScreen from "./app/screens/CurrencySelectorScreen";
+import OnboardingScreen, {
+  ONBOARDING_COMPLETE_KEY,
+} from "./app/screens/OnboardingScreen";
 import { ThemeProvider, useTheme } from "./app/context/ThemeContext";
 
 const Stack = createNativeStackNavigator();
 
 function AppContent() {
   const { theme, isDarkMode } = useTheme();
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState<
+    boolean | null
+  >(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if onboarding has been completed
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const value = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
+        setIsOnboardingComplete(value === "true");
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkOnboarding();
+  }, []);
 
   // Create a combined theme for NavigationContainer
   const navigationTheme = {
@@ -56,6 +81,11 @@ function AppContent() {
     updateNavigationBar();
   }, [isDarkMode]);
 
+  // Don't render anything while checking onboarding status
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <StatusBar
@@ -66,7 +96,7 @@ function AppContent() {
       <PaperProvider theme={theme}>
         <NavigationContainer theme={navigationTheme}>
           <Stack.Navigator
-            initialRouteName="Home"
+            initialRouteName={isOnboardingComplete ? "Home" : "Onboarding"}
             screenOptions={{
               headerShown: false,
               contentStyle: {
@@ -74,9 +104,14 @@ function AppContent() {
               },
             }}
           >
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="History" component={HistoryScreen} />
+            <Stack.Screen
+              name="CurrencySelector"
+              component={CurrencySelectorScreen}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

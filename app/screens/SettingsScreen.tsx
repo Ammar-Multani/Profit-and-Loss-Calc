@@ -7,6 +7,7 @@ import {
   Alert,
   Linking,
   Share,
+  Image,
 } from "react-native";
 import {
   Text,
@@ -28,6 +29,11 @@ import {
   saveSettings,
 } from "../utils/storage";
 import { useTheme } from "../context/ThemeContext";
+import {
+  Currency,
+  currencies,
+  ACCOUNT_CURRENCY_KEY,
+} from "../screens/CurrencySelectorScreen";
 
 export default function SettingsScreen() {
   const { colors, themeMode, setThemeMode, isDarkMode } = useTheme();
@@ -36,6 +42,9 @@ export default function SettingsScreen() {
   const [appearanceDialogVisible, setAppearanceDialogVisible] = useState(false);
   const [languageDialogVisible, setLanguageDialogVisible] = useState(false);
   const [calculatorDialogVisible, setCalculatorDialogVisible] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>(
+    currencies[0]
+  );
 
   const [language, setLanguage] = useState("english");
   const [calculatorMode, setCalculatorMode] = useState("standard");
@@ -50,6 +59,12 @@ export default function SettingsScreen() {
           "calculatorMode"
         );
         if (savedCalculatorMode) setCalculatorMode(savedCalculatorMode);
+
+        // Load saved currency
+        const savedCurrency = await AsyncStorage.getItem(ACCOUNT_CURRENCY_KEY);
+        if (savedCurrency) {
+          setSelectedCurrency(JSON.parse(savedCurrency));
+        }
       } catch (error) {
         console.error("Failed to load settings:", error);
       }
@@ -58,7 +73,23 @@ export default function SettingsScreen() {
     loadSettings();
   }, []);
 
-  const saveLanguage = async (value) => {
+  // Listen for changes when returning from currency selector
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", async () => {
+      try {
+        const savedCurrency = await AsyncStorage.getItem(ACCOUNT_CURRENCY_KEY);
+        if (savedCurrency) {
+          setSelectedCurrency(JSON.parse(savedCurrency));
+        }
+      } catch (error) {
+        console.error("Failed to load currency:", error);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const saveLanguage = async (value: string) => {
     setLanguage(value);
     try {
       await AsyncStorage.setItem("language", value);
@@ -67,7 +98,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const saveCalculatorMode = async (value) => {
+  const saveCalculatorMode = async (value: string) => {
     setCalculatorMode(value);
     try {
       await AsyncStorage.setItem("calculatorMode", value);
@@ -76,21 +107,27 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleThemeChange = (value) => {
+  const handleThemeChange = (value: "light" | "dark" | "system") => {
     setThemeMode(value);
     setAppearanceDialogVisible(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleLanguageChange = (value) => {
+  const handleLanguageChange = (value: string) => {
     saveLanguage(value);
     setLanguageDialogVisible(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleCalculatorModeChange = (value) => {
+  const handleCalculatorModeChange = (value: string) => {
     saveCalculatorMode(value);
     setCalculatorDialogVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  // Navigate to currency selector
+  const handleCurrencySelect = () => {
+    navigation.navigate("CurrencySelector" as never);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -170,7 +207,7 @@ export default function SettingsScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleOpenLink = (url) => {
+  const handleOpenLink = (url: string) => {
     Linking.openURL(url);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
@@ -180,7 +217,12 @@ export default function SettingsScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const renderSettingItem = (icon, title, onPress, showChevron = true) => (
+  const renderSettingItem = (
+    icon: string,
+    title: string,
+    onPress: () => void,
+    showChevron = true
+  ) => (
     <TouchableOpacity
       style={[
         styles.settingItem,
@@ -218,7 +260,63 @@ export default function SettingsScreen() {
     </TouchableOpacity>
   );
 
-  const renderSection = (title, children) => (
+  // New component to render the currency item
+  const renderCurrencyItem = () => (
+    <TouchableOpacity
+      style={[
+        styles.settingItem,
+        {
+          borderBottomColor: isDarkMode
+            ? "rgba(80, 80, 80, 0.5)"
+            : "rgba(220, 220, 220, 0.8)",
+          borderBottomWidth: 1,
+        },
+      ]}
+      onPress={handleCurrencySelect}
+    >
+      <View style={styles.settingItemLeft}>
+        <IconButton
+          icon="currency-usd"
+          size={24}
+          iconColor={isDarkMode ? "#90CAF9" : "#2196F3"}
+        />
+        <Text
+          style={[
+            styles.settingItemText,
+            { color: isDarkMode ? "#FFFFFF" : "#212121" },
+          ]}
+        >
+          Primary Currency
+        </Text>
+      </View>
+      <View style={styles.currencyPreview}>
+        <View style={styles.flagContainer}>
+          <Image
+            source={{
+              uri: `https://flagcdn.com/w160/${selectedCurrency.countryCode.toLowerCase()}.png`,
+            }}
+            style={styles.flag}
+            resizeMode="cover"
+          />
+        </View>
+        <Text
+          style={[
+            styles.currencyCode,
+            { color: isDarkMode ? "#AAAAAA" : "#757575" },
+          ]}
+        >
+          {selectedCurrency.code}
+        </Text>
+        <IconButton
+          icon="chevron-right"
+          size={24}
+          iconColor={isDarkMode ? "#AAAAAA" : "#757575"}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderSection = (title: string, children: React.ReactNode) => (
     <>
       <Text
         style={[
@@ -313,11 +411,12 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {renderSection(
-          "APPEARANCE",
+          "PREFERENCES",
           <>
             {renderSettingItem("palette", "Appearance", () =>
               setAppearanceDialogVisible(true)
             )}
+            {renderCurrencyItem()}
             {/* {renderSettingItem("translate", "Language", () =>
               setLanguageDialogVisible(true)
             )}
@@ -370,7 +469,7 @@ export default function SettingsScreen() {
           "CUSTOMER SERVICE",
           <>{renderSettingItem("bug", "Report a bug", handleSubmitBugReport)}</>
         )}
-
+        {/* 
         <View style={styles.dangerSection}>
           <LinearGradient
             colors={
@@ -391,7 +490,7 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            {/* <TouchableOpacity
+            <TouchableOpacity
               style={[
                 styles.dangerButton,
                 {
@@ -414,7 +513,7 @@ export default function SettingsScreen() {
                 size={24}
                 iconColor={isDarkMode ? "#AAAAAA" : "#757575"}
               />
-            </TouchableOpacity> */}
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.dangerButton}
@@ -433,7 +532,7 @@ export default function SettingsScreen() {
               />
             </TouchableOpacity>
           </LinearGradient>
-        </View>
+        </View> */}
 
         <View style={styles.footer}>
           <LinearGradient
@@ -476,7 +575,9 @@ export default function SettingsScreen() {
           </Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group
-              onValueChange={handleThemeChange}
+              onValueChange={(value) =>
+                handleThemeChange(value as "light" | "dark" | "system")
+              }
               value={themeMode}
             >
               <RadioButton.Item
@@ -730,5 +831,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     padding: 8,
+  },
+  currencyPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  flagContainer: {
+    marginRight: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  flag: {
+    width: 24,
+    height: 16,
+    borderRadius: 2,
+    borderWidth: 0.5,
+    borderColor: "rgba(0,0,0,0.1)",
+  },
+  currencyCode: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginRight: 4,
   },
 });
