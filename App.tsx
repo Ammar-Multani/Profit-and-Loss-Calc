@@ -21,6 +21,10 @@ import CurrencySelectorScreen from "./app/screens/CurrencySelectorScreen";
 import OnboardingScreen, {
   ONBOARDING_COMPLETE_KEY,
 } from "./app/screens/OnboardingScreen";
+import TermsScreen from "./app/screens/TermsScreen";
+import DisclaimerScreen from "./app/screens/DisclaimerScreen";
+import PrivacyScreen from "./app/screens/PrivacyScreen";
+import ManualScreen from "./app/screens/ManualScreen";
 import { ThemeProvider, useTheme } from "./app/context/ThemeContext";
 
 const Stack = createNativeStackNavigator();
@@ -112,6 +116,10 @@ function AppContent() {
               name="CurrencySelector"
               component={CurrencySelectorScreen}
             />
+            <Stack.Screen name="Terms" component={TermsScreen} />
+            <Stack.Screen name="Disclaimer" component={DisclaimerScreen} />
+            <Stack.Screen name="Privacy" component={PrivacyScreen} />
+            <Stack.Screen name="Manual" component={ManualScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

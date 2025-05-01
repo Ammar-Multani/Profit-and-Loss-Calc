@@ -948,7 +948,7 @@ const OnboardingScreen = ({ navigation }: { navigation: any }) => {
                     ]}
                   >
                     <Text style={[styles.mockupValue, { color: colors.text }]}>
-                      $100.00
+                      {selectedCurrency?.symbol || "$"}100.00
                     </Text>
                   </View>
                 </View>
@@ -968,7 +968,7 @@ const OnboardingScreen = ({ navigation }: { navigation: any }) => {
                     ]}
                   >
                     <Text style={[styles.mockupValue, { color: colors.text }]}>
-                      $150.00
+                      {selectedCurrency?.symbol || "$"}150.00
                     </Text>
                   </View>
                 </View>
@@ -1007,7 +1007,7 @@ const OnboardingScreen = ({ navigation }: { navigation: any }) => {
                       { color: colors.success },
                     ]}
                   >
-                    $5,000.00
+                    {selectedCurrency?.symbol || "$"}5,000.00
                   </Text>
                 </View>
               </View>

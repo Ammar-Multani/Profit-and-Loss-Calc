@@ -110,25 +110,21 @@ export default function SettingsScreen() {
   const handleThemeChange = (value: "light" | "dark" | "system") => {
     setThemeMode(value);
     setAppearanceDialogVisible(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleLanguageChange = (value: string) => {
     saveLanguage(value);
     setLanguageDialogVisible(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleCalculatorModeChange = (value: string) => {
     saveCalculatorMode(value);
     setCalculatorDialogVisible(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   // Navigate to currency selector
   const handleCurrencySelect = () => {
     navigation.navigate("CurrencySelector" as never);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleResetSettings = async () => {
@@ -147,7 +143,6 @@ export default function SettingsScreen() {
             setThemeMode("system");
             saveLanguage("english");
             saveCalculatorMode("standard");
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert(
               "Settings Reset",
               "All settings have been reset to default values."
@@ -176,7 +171,6 @@ export default function SettingsScreen() {
             setThemeMode("system");
             saveLanguage("english");
             saveCalculatorMode("standard");
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert(
               "Content Erased",
               "All content and settings have been erased."
@@ -194,7 +188,6 @@ export default function SettingsScreen() {
         message: "Check out this amazing Profit & Loss Calculator app!",
         url: "https://example.com/app",
       });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       Alert.alert("Error", "Failed to share the app.");
     }
@@ -204,17 +197,16 @@ export default function SettingsScreen() {
     Linking.openURL(
       "https://play.google.com/store/apps/details?id=com.example.app"
     );
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleOpenLink = (url: string) => {
-    Linking.openURL(url);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleNavigateToScreen = (screenName: string) => {
+    navigation.navigate(screenName as never);
   };
 
   const handleSubmitBugReport = () => {
-    Linking.openURL("mailto:support@example.com?subject=Bug%20Report");
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Linking.openURL(
+      "mailto:support@example.com?subject=Bug%20Report%20of%20Profit%20and%20Loss%20Calculator"
+    );
   };
 
   const renderSettingItem = (
@@ -432,10 +424,10 @@ export default function SettingsScreen() {
             {renderSettingItem(
               "file-document-outline",
               "Terms of service",
-              () => handleOpenLink("https://example.com/terms")
+              () => handleNavigateToScreen("Terms")
             )}
             {renderSettingItem("alert-circle-outline", "Disclaimer", () =>
-              handleOpenLink("https://example.com/disclaimer")
+              handleNavigateToScreen("Disclaimer")
             )}
           </>
         )}
@@ -444,7 +436,7 @@ export default function SettingsScreen() {
           "PRIVACY",
           <>
             {renderSettingItem("shield-account", "Privacy policy", () =>
-              handleOpenLink("https://example.com/privacy")
+              handleNavigateToScreen("Privacy")
             )}
           </>
         )}
@@ -453,7 +445,7 @@ export default function SettingsScreen() {
           "PROFIT AND LOSS CALCULATOR",
           <>
             {renderSettingItem("book-open-variant", "Manual", () =>
-              handleOpenLink("https://example.com/manual")
+              handleNavigateToScreen("Manual")
             )}
             {renderSettingItem(
               "share-variant",

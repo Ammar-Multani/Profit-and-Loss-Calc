@@ -29,6 +29,12 @@ import ResultsChart from "../components/ResultsChart";
 import CircularProgressDisplay from "../components/CircularProgressDisplay";
 import { generateUUID } from "../utils/uuid-helpers";
 import { exportToPdf } from "../utils/pdf-export";
+import {
+  formatCurrency,
+  formatPercentage,
+  getSelectedCurrency,
+} from "../utils/currency";
+import { Currency } from "../screens/CurrencySelectorScreen";
 
 interface ResultsType {
   revenue: number;
@@ -64,6 +70,25 @@ export default function HomeScreen() {
   const [showChart, setShowChart] = useState(false);
 
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+
+  // Add selected currency state
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(
+    null
+  );
+
+  // Load the selected currency
+  useEffect(() => {
+    const loadCurrency = async () => {
+      const currency = await getSelectedCurrency();
+      setSelectedCurrency(currency);
+    };
+
+    loadCurrency();
+
+    // Refresh currency when screen gains focus (in case user changed it)
+    const unsubscribe = navigation.addListener("focus", loadCurrency);
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     const loadCalculatorMode = async () => {
@@ -170,14 +195,6 @@ export default function HomeScreen() {
 
     // Show success message
     ToastAndroid.show("Saved to History", ToastAndroid.SHORT);
-  };
-
-  const formatCurrency = (value: number): string => {
-    return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-  };
-
-  const formatPercentage = (value: number): string => {
-    return `${value.toFixed(2)}%`;
   };
 
   const resetCalculator = () => {
@@ -756,7 +773,7 @@ export default function HomeScreen() {
                       { color: isDarkMode ? "#BBBBBB" : "#757575" },
                     ]}
                   >
-                    $
+                    {selectedCurrency?.symbol || "$"}
                   </Text>
                   <TextInput
                     style={[
@@ -800,7 +817,7 @@ export default function HomeScreen() {
                       { color: isDarkMode ? "#BBBBBB" : "#757575" },
                     ]}
                   >
-                    $
+                    {selectedCurrency?.symbol || "$"}
                   </Text>
                   <TextInput
                     style={[
@@ -951,7 +968,7 @@ export default function HomeScreen() {
                         { color: isDarkMode ? "#BBBBBB" : "#757575" },
                       ]}
                     >
-                      $
+                      {selectedCurrency?.symbol || "$"}
                     </Text>
                     <TextInput
                       style={[
@@ -1029,7 +1046,7 @@ export default function HomeScreen() {
                         { color: isDarkMode ? "#BBBBBB" : "#757575" },
                       ]}
                     >
-                      $
+                      {selectedCurrency?.symbol || "$"}
                     </Text>
                     <TextInput
                       style={[
@@ -1073,7 +1090,7 @@ export default function HomeScreen() {
                         { color: isDarkMode ? "#BBBBBB" : "#757575" },
                       ]}
                     >
-                      $
+                      {selectedCurrency?.symbol || "$"}
                     </Text>
                     <TextInput
                       style={[
@@ -1375,7 +1392,10 @@ export default function HomeScreen() {
                             { color: isDarkMode ? "#FFFFFF" : "#212121" },
                           ]}
                         >
-                          {formatCurrency(results.revenue)}
+                          {formatCurrency(
+                            results.revenue,
+                            selectedCurrency || undefined
+                          )}
                         </Text>
                       </View>
                     </View>
@@ -1416,7 +1436,10 @@ export default function HomeScreen() {
                             { color: isDarkMode ? "#FFFFFF" : "#212121" },
                           ]}
                         >
-                          {formatCurrency(results.costOfGoodsSold)}
+                          {formatCurrency(
+                            results.costOfGoodsSold,
+                            selectedCurrency || undefined
+                          )}
                         </Text>
                         <View
                           style={[
@@ -1494,7 +1517,10 @@ export default function HomeScreen() {
                           ]}
                         >
                           {results.grossProfit < 0 && "-"}
-                          {formatCurrency(Math.abs(results.grossProfit))}
+                          {formatCurrency(
+                            Math.abs(results.grossProfit),
+                            selectedCurrency || undefined
+                          )}
                         </Text>
                         <View
                           style={[
@@ -1644,7 +1670,10 @@ export default function HomeScreen() {
                               { color: isDarkMode ? "#FFFFFF" : "#212121" },
                             ]}
                           >
-                            {formatCurrency(results.totalExpenses)}
+                            {formatCurrency(
+                              results.totalExpenses,
+                              selectedCurrency || undefined
+                            )}
                           </Text>
                           <View
                             style={[
@@ -1798,7 +1827,10 @@ export default function HomeScreen() {
                           ]}
                         >
                           {results.netProfit < 0 && "-"}
-                          {formatCurrency(Math.abs(results.netProfit))}
+                          {formatCurrency(
+                            Math.abs(results.netProfit),
+                            selectedCurrency || undefined
+                          )}
                         </Text>
                         <View
                           style={[
@@ -1912,7 +1944,10 @@ export default function HomeScreen() {
                               { color: isDarkMode ? "#FFFFFF" : "#212121" },
                             ]}
                           >
-                            {formatCurrency(results.investment)}
+                            {formatCurrency(
+                              results.investment,
+                              selectedCurrency || undefined
+                            )}
                           </Text>
                         </View>
 

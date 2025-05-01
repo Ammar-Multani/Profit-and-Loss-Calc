@@ -6,6 +6,11 @@ export type RootStackParamList = {
   History: undefined;
   Onboarding: undefined;
   CurrencySelector: undefined;
+  Terms: undefined;
+  Disclaimer: undefined;
+  Privacy: undefined;
+  Manual: undefined;
+  BugReport: undefined;
 };
 
 export type HomeScreenProps = NativeStackScreenProps<

@@ -15,14 +15,23 @@ import LinearGradient from "react-native-linear-gradient";
 import { getCalculationHistory, deleteCalculation } from "../utils/storage";
 import { HistoryItem } from "../types";
 import { useTheme } from "../context/ThemeContext";
+import {
+  formatCurrency,
+  formatPercentage,
+  getSelectedCurrency,
+} from "../utils/currency";
+import { Currency } from "../screens/CurrencySelectorScreen";
 
 export default function HistoryScreen() {
-  const { colors, isDarkMode } = useTheme();
+  const { colors, isDarkMode, themeMode } = useTheme();
   const navigation = useNavigation();
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(
+    null
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -30,6 +39,18 @@ export default function HistoryScreen() {
       return () => {};
     }, [])
   );
+
+  useEffect(() => {
+    const loadCurrency = async () => {
+      const currency = await getSelectedCurrency();
+      setSelectedCurrency(currency);
+    };
+
+    loadCurrency();
+
+    const unsubscribe = navigation.addListener("focus", loadCurrency);
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -78,14 +99,6 @@ export default function HistoryScreen() {
         },
       ]
     );
-  };
-
-  const formatCurrency = (value: number) => {
-    return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-  };
-
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
   };
 
   const formatDate = (timestamp: number) => {
@@ -175,7 +188,10 @@ export default function HistoryScreen() {
                     { color: isDarkMode ? "#FFFFFF" : "#212121" },
                   ]}
                 >
-                  {formatCurrency(item.entryPrice)}
+                  {formatCurrency(
+                    item.entryPrice,
+                    selectedCurrency || undefined
+                  )}
                 </Text>
               </View>
 
@@ -201,7 +217,10 @@ export default function HistoryScreen() {
                     { color: isDarkMode ? "#FFFFFF" : "#212121" },
                   ]}
                 >
-                  {formatCurrency(item.exitPrice)}
+                  {formatCurrency(
+                    item.exitPrice,
+                    selectedCurrency || undefined
+                  )}
                 </Text>
               </View>
             </View>
@@ -273,7 +292,10 @@ export default function HistoryScreen() {
                   ]}
                 >
                   {isProfitable ? "+" : ""}
-                  {formatCurrency(item.result.netProfitLoss)}
+                  {formatCurrency(
+                    item.result.netProfitLoss,
+                    selectedCurrency || undefined
+                  )}
                 </Text>
               </View>
 

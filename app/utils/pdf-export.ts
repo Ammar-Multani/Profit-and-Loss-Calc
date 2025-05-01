@@ -1,6 +1,13 @@
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { DocumentDir, writeFile } from "react-native-fs";
 import * as Print from "expo-print";
+import {
+  formatCurrency,
+  formatPercentage,
+  getSelectedCurrency,
+} from "./currency";
+import { Currency } from "../screens/CurrencySelectorScreen";
 import { Alert, Platform } from "react-native";
 
 interface ResultsData {
@@ -42,12 +49,15 @@ export const exportToPdf = async ({
   taxRate,
 }: ExportToPdfOptions) => {
   try {
+    // Get the user's selected currency
+    const selectedCurrency = await getSelectedCurrency();
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const pdfFileName = `${fileName}-${timestamp}.pdf`;
 
-    // Format currency
-    const formatCurrency = (value: number): string => {
-      return `$${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    // Format currency using the selected currency
+    const formatCurrencyWithSymbol = (value: number): string => {
+      return formatCurrency(value, selectedCurrency);
     };
 
     // Format percentage
@@ -175,7 +185,7 @@ export const exportToPdf = async ({
           
           <div class="summary">
             <h2 class="summary-title">Summary - ${profitStatus}</h2>
-            <p class="profit-value">${formatCurrency(
+            <p class="profit-value">${formatCurrencyWithSymbol(
               Math.abs(resultsData.netProfit)
             )}</p>
             <p>Net Profit Margin: ${formatPercentage(
@@ -193,11 +203,11 @@ export const exportToPdf = async ({
               </tr>
               <tr>
                 <td>Buying Price</td>
-                <td>${formatCurrency(buyingPrice)}</td>
+                <td>${formatCurrencyWithSymbol(buyingPrice)}</td>
               </tr>
               <tr>
                 <td>Selling Price</td>
-                <td>${formatCurrency(sellingPrice)}</td>
+                <td>${formatCurrencyWithSymbol(sellingPrice)}</td>
               </tr>
               <tr>
                 <td>Units</td>
@@ -205,15 +215,15 @@ export const exportToPdf = async ({
               </tr>
               <tr>
                 <td>Operating Expenses</td>
-                <td>${formatCurrency(operatingExpenses)}</td>
+                <td>${formatCurrencyWithSymbol(operatingExpenses)}</td>
               </tr>
               <tr>
                 <td>Buying Expenses Per Unit</td>
-                <td>${formatCurrency(buyingExpensesPerUnit)}</td>
+                <td>${formatCurrencyWithSymbol(buyingExpensesPerUnit)}</td>
               </tr>
               <tr>
                 <td>Selling Expenses Per Unit</td>
-                <td>${formatCurrency(sellingExpensesPerUnit)}</td>
+                <td>${formatCurrencyWithSymbol(sellingExpensesPerUnit)}</td>
               </tr>
               <tr>
                 <td>Tax Rate</td>
@@ -232,84 +242,91 @@ export const exportToPdf = async ({
               </tr>
               <tr>
                 <td>Revenue</td>
-                <td>${formatCurrency(resultsData.revenue)}</td>
+                <td>${formatCurrencyWithSymbol(resultsData.revenue)}</td>
                 <td>100%</td>
               </tr>
               <tr>
                 <td>Cost of Goods Sold</td>
-                <td>${formatCurrency(resultsData.costOfGoodsSold)}</td>
+                <td>${formatCurrencyWithSymbol(
+                  resultsData.costOfGoodsSold
+                )}</td>
                 <td>${formatPercentage(
                   (resultsData.costOfGoodsSold / resultsData.revenue) * 100
                 )}</td>
               </tr>
               <tr>
                 <td>Gross Profit</td>
-                <td>${formatCurrency(resultsData.grossProfit)}</td>
+                <td>${formatCurrencyWithSymbol(resultsData.grossProfit)}</td>
                 <td>${formatPercentage(resultsData.grossProfitMargin)}</td>
               </tr>
               <tr>
                 <td>Total Expenses</td>
-                <td>${formatCurrency(resultsData.totalExpenses)}</td>
+                <td>${formatCurrencyWithSymbol(resultsData.totalExpenses)}</td>
                 <td>${formatPercentage(
                   (resultsData.totalExpenses / resultsData.revenue) * 100
                 )}</td>
               </tr>
               <tr>
                 <td>Operating Profit</td>
-                <td>${formatCurrency(resultsData.operatingProfit)}</td>
+                <td>${formatCurrencyWithSymbol(
+                  resultsData.operatingProfit
+                )}</td>
                 <td>${formatPercentage(
                   (resultsData.operatingProfit / resultsData.revenue) * 100
                 )}</td>
               </tr>
               <tr>
                 <td>Tax Amount</td>
-                <td>${formatCurrency(resultsData.taxAmount)}</td>
+                <td>${formatCurrencyWithSymbol(resultsData.taxAmount)}</td>
                 <td>${formatPercentage(
                   (resultsData.taxAmount / resultsData.revenue) * 100
                 )}</td>
               </tr>
               <tr style="font-weight: bold; background-color: ${profitColor}25;">
                 <td>Net Profit</td>
-                <td>${formatCurrency(Math.abs(resultsData.netProfit))}</td>
+                <td>${formatCurrencyWithSymbol(
+                  Math.abs(resultsData.netProfit)
+                )}</td>
                 <td>${formatPercentage(
                   Math.abs(resultsData.netProfitMargin)
                 )}</td>
               </tr>
             </table>
             
-            <h3 class="section-title">Key Metrics</h3>
             <div class="metrics-grid">
               <div class="metric-card">
-                <h4 class="metric-title">ROI (Return on Investment)</h4>
+                <h3 class="metric-title">Return on Investment (ROI)</h3>
                 <p class="metric-value" style="color: ${
                   resultsData.roi >= 0 ? "#4CAF50" : "#F44336"
                 }">
-                  ${formatPercentage(resultsData.roi)}
+                ${formatPercentage(resultsData.roi)}
                 </p>
               </div>
               
               <div class="metric-card">
-                <h4 class="metric-title">Investment</h4>
-                <p class="metric-value">${formatCurrency(
+                <h3 class="metric-title">Total Investment</h3>
+                <p class="metric-value">${formatCurrencyWithSymbol(
                   resultsData.investment
                 )}</p>
               </div>
               
-              ${
-                resultsData.breakEvenUnits > 0
-                  ? `
-                <div class="metric-card">
-                  <h4 class="metric-title">Break-even Point</h4>
-                  <p class="metric-value">${resultsData.breakEvenUnits} units</p>
-                </div>
-              `
-                  : ""
-              }
+              <div class="metric-card">
+                <h3 class="metric-title">Break-even Point</h3>
+                <p class="metric-value">${resultsData.breakEvenUnits} units</p>
+              </div>
+              
+              <div class="metric-card">
+                <h3 class="metric-title">Revenue per Unit</h3>
+                <p class="metric-value">${formatCurrencyWithSymbol(
+                  units > 0 ? resultsData.revenue / units : 0
+                )}</p>
+              </div>
             </div>
           </div>
           
           <div class="footer">
-            <p>Generated using Profit & Loss Calculator</p>
+            <p>This report was generated using Profit & Loss Calculator</p>
+            <p>* All calculations are based on the provided inputs and should be used for estimation purposes only.</p>
           </div>
         </body>
       </html>
