@@ -8,6 +8,7 @@ import {
   Linking,
   Share,
   Image,
+  Platform,
 } from "react-native";
 import {
   Text,
@@ -16,7 +17,10 @@ import {
   Portal,
   RadioButton,
 } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -38,6 +42,7 @@ import {
 export default function SettingsScreen() {
   const { colors, themeMode, setThemeMode, isDarkMode } = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const [appearanceDialogVisible, setAppearanceDialogVisible] = useState(false);
   const [languageDialogVisible, setLanguageDialogVisible] = useState(false);
@@ -350,11 +355,12 @@ export default function SettingsScreen() {
   );
 
   return (
-    <View
+    <SafeAreaView
       style={[
         styles.container,
         { backgroundColor: isDarkMode ? "#121212" : "#F8F9FA" },
       ]}
+      edges={["left", "right"]}
     >
       <View
         style={[
@@ -365,6 +371,8 @@ export default function SettingsScreen() {
               ? "rgba(75, 75, 75, 0.3)"
               : "rgba(230, 230, 230, 0.8)",
             borderBottomWidth: 1,
+            paddingTop: Platform.OS === "ios" ? 0 : 16,
+            height: Platform.OS === "ios" ? 60 : 100,
           },
         ]}
       >
@@ -705,7 +713,7 @@ export default function SettingsScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -718,9 +726,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 25,
-    height: 100,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 10,
     elevation: 3,
   },
   headerGradient: {
@@ -732,8 +738,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingHorizontal: 10,
   },
   backButton: {
     margin: 0,

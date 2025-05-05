@@ -601,6 +601,9 @@ export default function HomeScreen() {
             borderBottomColor: isDarkMode
               ? "rgba(75, 75, 75, 0.3)"
               : "rgba(230, 230, 230, 0.8)",
+            borderBottomWidth: 1,
+            paddingTop: Platform.OS === "ios" ? 0 : 16,
+            height: Platform.OS === "ios" ? 60 : 100,
           },
         ]}
       >
@@ -2018,9 +2021,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 25,
-    height: 95,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 10,
     elevation: 3,
   },
   headerGradient: {
@@ -2032,9 +2033,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 25,
-    paddingTop: 13,
+    paddingTop: 5,
+    paddingHorizontal: 22,
   },
+
+  
   headerLeft: {
     flexDirection: "column",
     paddingTop: 16,

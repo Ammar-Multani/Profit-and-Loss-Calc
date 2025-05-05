@@ -5,24 +5,31 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Platform,
 } from "react-native";
 import { Text, IconButton } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import LinearGradient from "react-native-linear-gradient";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useTheme } from "../context/ThemeContext";
 
 export default function TermsScreen() {
   const { colors, isDarkMode } = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View
+    <SafeAreaView
       style={[
         styles.container,
         { backgroundColor: isDarkMode ? "#121212" : "#F8F9FA" },
       ]}
+      edges={["left", "right"]}
     >
       <View
         style={[
@@ -33,6 +40,8 @@ export default function TermsScreen() {
               ? "rgba(75, 75, 75, 0.3)"
               : "rgba(230, 230, 230, 0.8)",
             borderBottomWidth: 1,
+            paddingTop: Platform.OS === "ios" ? 0 : 16,
+            height: Platform.OS === "ios" ? 60 : 100,
           },
         ]}
       >
@@ -99,7 +108,6 @@ export default function TermsScreen() {
             >
               Terms and Conditions
             </Text>
-
 
             <Text
               style={[
@@ -262,7 +270,7 @@ export default function TermsScreen() {
           </LinearGradient>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -275,8 +283,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 25,
-    height: 100,
-    paddingBottom: 16,
+    paddingBottom: 10,
     elevation: 3,
   },
   headerGradient: {
@@ -288,8 +295,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingHorizontal: 10,
   },
   backButton: {
     margin: 0,
